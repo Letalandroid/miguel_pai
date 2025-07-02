@@ -27,13 +27,20 @@ const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
 
 // Mock users for demonstration
 const mockUsers: User[] = [
-  { id: "1", name: "Juan Pérez", email: "graduate@example.com", role: "graduate" },
+  {
+    id: "1",
+    name: "Juan Pérez",
+    email: "graduate@example.com",
+    role: "graduate",
+  },
   { id: "2", name: "Jefa de Area", email: "admin@example.com", role: "admin" },
   { id: "3", name: "TOTTUS", email: "company@example.com", role: "company" },
 ];
 
 // Provider component
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [user, setUser] = React.useState<User | null>(null);
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
   const history = useHistory();
@@ -49,18 +56,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Login function
   const login = async (email: string, password: string) => {
     setIsLoading(true);
-    
+
     try {
       // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       // Find user by email (mock authentication)
-      const foundUser = mockUsers.find(u => u.email === email);
-      
-      if (foundUser && password === "password") { // Simple password check
+      const foundUser = mockUsers.find((u) => u.email === email);
+
+      if (foundUser && password === "password") {
+        // Simple password check
         setUser(foundUser);
         localStorage.setItem("user", JSON.stringify(foundUser));
-        
+
         // Redirect based on role
         switch (foundUser.role) {
           case "graduate":
@@ -73,11 +81,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             history.push("/company/dashboard");
             break;
         }
-        
+
         addToast({
           title: "Inicio de sesión exitoso",
           description: `Bienvenido, ${foundUser.name}`,
-          color: "success"
+          color: "success",
         });
       } else {
         throw new Error("Credenciales inválidas");
@@ -85,8 +93,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       addToast({
         title: "Error de inicio de sesión",
-        description: error instanceof Error ? error.message : "Ocurrió un error",
-        color: "danger"
+        description:
+          error instanceof Error ? error.message : "Ocurrió un error",
+        color: "danger",
       });
     } finally {
       setIsLoading(false);
@@ -101,26 +110,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     addToast({
       title: "Sesión cerrada",
       description: "Has cerrado sesión correctamente",
-      color: "primary"
+      color: "primary",
     });
   };
 
   // Forgot password function
   const forgotPassword = async (email: string) => {
     setIsLoading(true);
-    
+
     try {
       // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       // Check if email exists
-      const foundUser = mockUsers.find(u => u.email === email);
-      
+      const foundUser = mockUsers.find((u) => u.email === email);
+
       if (foundUser) {
         addToast({
           title: "Correo enviado",
-          description: "Se ha enviado un correo con instrucciones para restablecer tu contraseña",
-          color: "success"
+          description:
+            "Se ha enviado un correo con instrucciones para restablecer tu contraseña",
+          color: "success",
         });
       } else {
         throw new Error("Correo electrónico no encontrado");
@@ -128,8 +138,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       addToast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Ocurrió un error",
-        color: "danger"
+        description:
+          error instanceof Error ? error.message : "Ocurrió un error",
+        color: "danger",
       });
     } finally {
       setIsLoading(false);
@@ -142,7 +153,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isLoading,
     login,
     logout,
-    forgotPassword
+    forgotPassword,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
