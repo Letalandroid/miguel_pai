@@ -22,6 +22,7 @@ import { Icon } from "@iconify/react";
 import { motion } from "framer-motion";
 import { addToast } from "@heroui/react";
 import { supabase } from "../../../supabase/client";
+import { uploadFileFromBrowser } from "../../../utils/uploadFiles";
 
 // Workshop type definition
 interface Workshop {
@@ -149,7 +150,7 @@ const participantsMock: Participant[] = [
 ];
 
 export const AdminWorkshops: React.FC = () => {
-  const [workshops, setWorkshops] = React.useState<Workshop[]>(workshopsMock);
+  const [workshops, setWorkshops] = React.useState<Workshop[]>([]);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<
     "all" | "upcoming" | "active" | "completed"
@@ -172,7 +173,7 @@ export const AdminWorkshops: React.FC = () => {
         .select("*")
         .order("id", { ascending: false });
 
-      setWorkshops([...data, ...workshops]);
+      setWorkshops(data);
 
       if (error) {
         throw error;
@@ -370,17 +371,34 @@ export const AdminWorkshops: React.FC = () => {
   const handleAddWorkshop = async () => {
     if (validateForm()) {
       // Create new workshop
+      let imageUrl =
+        "https://img.heroui.chat/image/ai?w=600&h=400&u=workshop" +
+        (workshops.length + 1);
+
+      if (formData.image) {
+        const file = formData.image; // Asegúrate de que es del tipo File
+        const filename = `workshop_${Date.now()}_${file.name}`;
+        const bucket = "talleres"; // o el nombre de tu bucket en Supabase
+
+        try {
+          const uploadResult = await uploadFileFromBrowser(
+            file,
+            filename,
+            bucket
+          );
+          imageUrl = uploadResult.publicUrl;
+        } catch (error) {
+          console.error("Error uploading file:", error);
+        }
+      }
+
       const newWorkshop: Workshop = {
         id: (workshops.length + 1).toString(),
         title: formData.title,
         description: formData.description,
         date: `${formData.date}T${formData.time}`,
         status: "upcoming",
-        image: formData.image
-          ? URL.createObjectURL(formData.image)
-          : "https://img.heroui.chat/image/ai?w=600&h=400&u=workshop" +
-            (workshops.length + 1),
-        // image: "https://img.heroui.chat/image/ai?w=600&h=400&u=workshop",
+        image: imageUrl,
         link: formData.link,
         participants: 0,
         maxParticipants: parseInt(formData.maxParticipants),
@@ -388,9 +406,7 @@ export const AdminWorkshops: React.FC = () => {
 
       const { id, ...workshopWithoutId } = newWorkshop;
 
-      const addTaller = await supabase
-        .from("talleres")
-        .insert(workshopWithoutId);
+      const addTaller = await supabase.from("talleres").insert(workshopWithoutId);
 
       console.log(addTaller);
 
