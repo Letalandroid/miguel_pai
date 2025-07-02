@@ -167,7 +167,7 @@ export const AdminWorkshops: React.FC = () => {
     React.useState<Participant[]>(participantsMock);
 
   useEffect(() => {
-    const getTasks = async () => {
+    const getTalleres = async () => {
       const { error, data } = await supabase
         .from("talleres")
         .select("*")
@@ -180,7 +180,7 @@ export const AdminWorkshops: React.FC = () => {
       }
     };
 
-    getTasks();
+    getTalleres();
   }, []);
 
   // Form state
