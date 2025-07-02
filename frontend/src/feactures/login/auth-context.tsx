@@ -47,7 +47,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [user, setUser] = React.useState<User | null>(null);
-  const [graduates, setGraduates] = React.useState<User[] | null>([]);
+  const [graduates, setGraduates] = React.useState<User[]>([]);
+  const [isGraduatesLoaded, setIsGraduatesLoaded] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
   const history = useHistory();
 
@@ -58,11 +59,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         .select("*")
         .order("id", { ascending: false });
 
-      setGraduates(data);
+      if (data) setGraduates(data);
+      if (error) console.error(error);
 
-      if (error) {
-        throw error;
-      }
+      setIsGraduatesLoaded(true); // ✅ Marcar como cargado
     };
 
     getGraduados();
@@ -81,26 +81,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setIsLoading(true);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // 🔁 Esperar a que graduates esté cargado antes de continuar
+      if (!isGraduatesLoaded) {
+        await new Promise((resolve) => {
+          const check = setInterval(() => {
+            if (isGraduatesLoaded) {
+              clearInterval(check);
+              resolve(true);
+            }
+          }, 100);
+        });
+      }
 
-      // Buscar en usuarios mock (admin, company, etc.)
+      await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulación
+
       const foundUser = mockUsers.find(
         (u) => u.email.toLowerCase() === email.toLowerCase()
       );
 
-      // Buscar en egresados de Supabase
       const graduateUser = graduates.find(
         (u) => u.email.toLowerCase() === email.toLowerCase()
       );
 
-      // Validar login
       if ((foundUser || graduateUser) && password === "password") {
         const user = foundUser || { ...graduateUser, role: "graduate" };
 
         setUser(user);
         localStorage.setItem("user", JSON.stringify(user));
 
-        // Redirigir según el rol
         switch (user.role) {
           case "graduate":
             history.push("/graduate/dashboard");
