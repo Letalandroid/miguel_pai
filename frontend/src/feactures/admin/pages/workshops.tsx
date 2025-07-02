@@ -406,7 +406,7 @@ export const AdminWorkshops: React.FC = () => {
 
       const { id, ...workshopWithoutId } = newWorkshop;
 
-      const addTaller = await supabase.from("talleres").insert(workshopWithoutId);
+      await supabase.from("talleres").insert(workshopWithoutId);
 
       setWorkshops([...workshops, newWorkshop]);
       setIsAddModalOpen(false);
@@ -432,26 +432,39 @@ export const AdminWorkshops: React.FC = () => {
   };
 
   // Handle form submission for editing a workshop
-  const handleEditWorkshop = () => {
+  const handleEditWorkshop = async () => {
     if (validateForm() && selectedWorkshop) {
       // Update workshop
-      const updatedWorkshops = workshops.map((workshop) =>
-        workshop.id === selectedWorkshop.id
-          ? {
-              ...workshop,
-              title: formData.title,
-              description: formData.description,
-              date: `${formData.date}T${formData.time}`,
-              link: formData.link,
-              maxParticipants: parseInt(formData.maxParticipants),
-              image: formData.image
-                ? URL.createObjectURL(formData.image)
-                : workshop.image,
-            }
-          : workshop
-      );
+      const updatedFields = {
+        title: formData.title,
+        description: formData.description,
+        date: `${formData.date}T${formData.time}`,
+        link: formData.link,
+        maxParticipants: parseInt(formData.maxParticipants),
+        image: formData.image
+          ? URL.createObjectURL(formData.image) // ⚠ solo para vista previa
+          : selectedWorkshop.image,
+      };
 
-      setWorkshops(updatedWorkshops);
+      // Actualiza en Supabase
+      const { error } = await supabase
+        .from("talleres")
+        .update(updatedFields)
+        .eq("id", selectedWorkshop.id);
+
+      if (error) {
+        console.error("Error al actualizar taller:", error);
+      } else {
+        // Actualiza el estado local
+        const updatedWorkshops = workshops.map((workshop) =>
+          workshop.id === selectedWorkshop.id
+            ? { ...workshop, ...updatedFields }
+            : workshop
+        );
+
+        setWorkshops(updatedWorkshops);
+      }
+
       setIsEditModalOpen(false);
 
       // Show success message
@@ -464,22 +477,41 @@ export const AdminWorkshops: React.FC = () => {
   };
 
   // Delete workshop
-  const handleDeleteWorkshop = () => {
-    if (selectedWorkshop) {
-      const updatedWorkshops = workshops.filter(
-        (workshop) => workshop.id !== selectedWorkshop.id
-      );
-      setWorkshops(updatedWorkshops);
-      setIsDeleteModalOpen(false);
-      setIsDetailsModalOpen(false);
+  const handleDeleteWorkshop = async () => {
+    if (!selectedWorkshop) return;
 
-      // Show success message
+    // 1. Eliminar de Supabase
+    const { error } = await supabase
+      .from("talleres")
+      .delete()
+      .eq("id", selectedWorkshop.id);
+
+    if (error) {
+      console.error("Error al eliminar el taller:", error);
       addToast({
-        title: "Taller eliminado",
-        description: "El taller ha sido eliminado correctamente",
-        color: "success",
+        title: "Error",
+        description: "No se pudo eliminar el taller",
+        color: "danger",
       });
+      return;
     }
+
+    // 2. Eliminar del estado local
+    const updatedWorkshops = workshops.filter(
+      (workshop) => workshop.id !== selectedWorkshop.id
+    );
+    setWorkshops(updatedWorkshops);
+
+    // 3. Cerrar modales
+    setIsDeleteModalOpen(false);
+    setIsDetailsModalOpen(false);
+
+    // 4. Mostrar notificación
+    addToast({
+      title: "Taller eliminado",
+      description: "El taller ha sido eliminado correctamente",
+      color: "success",
+    });
   };
 
   // View workshop details
