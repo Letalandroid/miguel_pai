@@ -486,22 +486,38 @@ export const AdminJobs: React.FC = () => {
   };
 
   // Change job status
-  const handleChangeStatus = (
+  const handleChangeStatus = async (
     jobId: string,
     newStatus: "active" | "closed" | "draft"
   ) => {
+    // 1. Actualizar en Supabase
+    const { error } = await supabase
+      .from("convocatorias")
+      .update({ status: newStatus })
+      .eq("id", jobId);
+
+    if (error) {
+      console.error("Error al cambiar el estado:", error.message);
+      addToast({
+        title: "Error",
+        description: "No se pudo actualizar el estado de la convocatoria",
+        color: "danger",
+      });
+      return;
+    }
+
+    // 2. Actualizar el estado local
     const updatedJobs = jobs.map((job) =>
       job.id === jobId ? { ...job, status: newStatus } : job
     );
-
     setJobs(updatedJobs);
 
-    // Update selected job if it's the one being changed
+    // 3. Actualizar el job seleccionado (si aplica)
     if (selectedJob && selectedJob.id === jobId) {
       setSelectedJob({ ...selectedJob, status: newStatus });
     }
 
-    // Show success message
+    // 4. Mostrar mensaje de éxito
     addToast({
       title: "Estado actualizado",
       description: `La convocatoria ahora está ${
