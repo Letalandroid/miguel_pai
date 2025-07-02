@@ -124,7 +124,7 @@ export const GraduateLayout: React.FC = () => {
                 as="button"
                 className="transition-transform"
                 color="primary"
-                name={user.name}
+                name={user.name.slice(0, 2).toUpperCase()}
                 size="sm"
               />
             </DropdownTrigger>

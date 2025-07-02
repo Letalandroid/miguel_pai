@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useHistory } from "react-router-dom";
 import { addToast } from "@heroui/react";
+import { supabase } from "../../supabase/client";
 
 // Define user types
 export type UserRole = "graduate" | "admin" | "company";
@@ -8,6 +9,10 @@ export type UserRole = "graduate" | "admin" | "company";
 export interface User {
   id: string;
   name: string;
+  career?: string;
+  graduationYear?: string;
+  phone?: string;
+  status?: string;
   email: string;
   role: UserRole;
 }
@@ -42,35 +47,61 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [user, setUser] = React.useState<User | null>(null);
+  const [graduates, setGraduates] = React.useState<User[] | null>([]);
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
   const history = useHistory();
 
-  // Check if user is already logged in
-  React.useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
+  useEffect(() => {
+    const getGraduados = async () => {
+      const { error, data } = await supabase
+        .from("egresados")
+        .select("*")
+        .order("id", { ascending: false });
+
+      setGraduates(data);
+
+      if (error) {
+        throw error;
+      }
+    };
+
+    getGraduados();
   }, []);
+
+  // Check if user is already logged in
+  // React.useEffect(() => {
+  //   const storedUser = localStorage.getItem("user");
+  //   if (storedUser) {
+  //     setUser(JSON.parse(storedUser));
+  //   }
+  // }, []);
 
   // Login function
   const login = async (email: string, password: string) => {
     setIsLoading(true);
 
     try {
-      // Simulate API call delay
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      // Find user by email (mock authentication)
-      const foundUser = mockUsers.find((u) => u.email === email);
+      // Buscar en usuarios mock (admin, company, etc.)
+      const foundUser = mockUsers.find(
+        (u) => u.email.toLowerCase() === email.toLowerCase()
+      );
 
-      if (foundUser && password === "password") {
-        // Simple password check
-        setUser(foundUser);
-        localStorage.setItem("user", JSON.stringify(foundUser));
+      // Buscar en egresados de Supabase
+      const graduateUser = graduates.find(
+        (u) => u.email.toLowerCase() === email.toLowerCase()
+      );
 
-        // Redirect based on role
-        switch (foundUser.role) {
+      // Validar login
+      if ((foundUser || graduateUser) && password === "password") {
+        const user = foundUser || { ...graduateUser, role: "graduate" };
+
+        setUser(user);
+        localStorage.setItem("user", JSON.stringify(user));
+
+        // Redirigir según el rol
+        switch (user.role) {
           case "graduate":
             history.push("/graduate/dashboard");
             break;
@@ -84,7 +115,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
         addToast({
           title: "Inicio de sesión exitoso",
-          description: `Bienvenido, ${foundUser.name}`,
+          description: `Bienvenido, ${user.name}`,
           color: "success",
         });
       } else {
