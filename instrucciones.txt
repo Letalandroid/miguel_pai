@@ -1,0 +1,21 @@
+Para levantar el fornted ejecuta:
+primero --> npm i
+segundo --> npm run dev
+
+si te sale error que no reconoce o no exite node en tu pc, instalas
+node en tu pc
+
+ahora para el backend 
+
+borras la carpeta llamada venv/
+luego creas un entorno de ambiente:
+con windows es creo: python -m venv venv
+luego de eso haces esto:
+pip install -r requirements.tsx
+luego de eso levantas el servidor de de fastapi con:
+
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+
+
+ojo las tablas se crean cuando levantas el servidor del backend 
+sino solamente importas la base de datos que te pase.
