@@ -19,26 +19,41 @@ export const GraduateProfile: React.FC = () => {
   const [isUploading, setIsUploading] = React.useState(false);
   const [uploadProgress, setUploadProgress] = React.useState(0);
 
+  function getRandomBirthDate(minAge = 20, maxAge = 35): string {
+    const today = new Date();
+    const randomAge =
+      Math.floor(Math.random() * (maxAge - minAge + 1)) + minAge;
+    const birthYear = today.getFullYear() - randomAge;
+
+    // Crear la fecha con el mismo mes y día que hoy
+    const birthDate = new Date(birthYear, today.getMonth(), today.getDate());
+
+    return birthDate.toISOString().split("T")[0]; // "YYYY-MM-DD"
+  }
+
   // Form state
   const [formData, setFormData] = React.useState({
-    firstName: "Juan",
-    lastName: "Pérez",
+    firstName: user?.name,
+    lastName: '',
     email: user?.email || "juan.perez@ejemplo.com",
-    altEmail: "juan@ejemplo.com",
-    phone: "987654321",
-    gender: "Masculino",
+    altEmail: user?.email,
+    phone: user?.phone,
+    gender: "Prefiere no decirlo",
     city: "Lima",
-    birthDate: "1998-05-10",
-    career: "Ingeniería de Sistemas",
-    graduationYear: "2022",
-    academicDegree: "Bachiller",
+    birthDate: getRandomBirthDate(),
+    career: user?.career,
+    graduationYear: user?.graduationYear,
+    academicDegree: user?.role,
     cv: null, // No hay archivo cargado por defecto en gestión de CV
   });
 
   // Nuevo estado para el CV actual del usuario
-  const [currentCV, setCurrentCV] = React.useState<{ name: string; url: string } | null>({
-    name: "CV_Juan_Perez.pdf",
-    url: "#"
+  const [currentCV, setCurrentCV] = React.useState<{
+    name: string;
+    url: string;
+  } | null>({
+    name: `CV_${user?.name.replace(" ", "_")}.pdf`,
+    url: "#",
   });
 
   // Form errors
@@ -223,7 +238,7 @@ export const GraduateProfile: React.FC = () => {
             // Actualiza el CV actual con el nuevo
             setCurrentCV({
               name: formData.cv.name,
-              url: "#" // Aquí iría la URL real tras subirlo
+              url: "#", // Aquí iría la URL real tras subirlo
             });
             setFormData({ ...formData, cv: null });
             addToast({
@@ -420,7 +435,9 @@ export const GraduateProfile: React.FC = () => {
                     placeholder="Ej: 2022"
                     type="number"
                     value={formData.graduationYear}
-                    onValueChange={(value) => handleChange("graduationYear", value)}
+                    onValueChange={(value) =>
+                      handleChange("graduationYear", value)
+                    }
                     isInvalid={!!errors.graduationYear}
                     errorMessage={errors.graduationYear}
                     isDisabled={true}
@@ -431,7 +448,9 @@ export const GraduateProfile: React.FC = () => {
                     label="Grado académico"
                     placeholder="Ej: Bachiller, Licenciado, Magíster"
                     value={formData.academicDegree}
-                    onValueChange={(value) => handleChange("academicDegree", value)}
+                    onValueChange={(value) =>
+                      handleChange("academicDegree", value)
+                    }
                     isInvalid={!!errors.academicDegree}
                     errorMessage={errors.academicDegree}
                     isDisabled={!isEditing}
@@ -465,18 +484,32 @@ export const GraduateProfile: React.FC = () => {
         <motion.div variants={itemVariants} className="md:col-span-1">
           <Card shadow="sm" className="mb-6">
             <CardHeader className="flex gap-3">
-              <Icon icon="lucide:file-check" width={24} height={24} className="text-success" />
+              <Icon
+                icon="lucide:file-check"
+                width={24}
+                height={24}
+                className="text-success"
+              />
               <div className="flex flex-col">
                 <p className="text-lg font-semibold">CV Actual</p>
-                <p className="text-small text-default-500">Este es el CV actualmente registrado</p>
+                <p className="text-small text-default-500">
+                  Este es el CV actualmente registrado
+                </p>
               </div>
             </CardHeader>
             <Divider />
             <CardBody>
               {currentCV ? (
                 <div className="flex items-center gap-2">
-                  <Icon icon="lucide:file" width={20} height={20} className="text-primary" />
-                  <span className="text-small truncate max-w-[150px]">{currentCV.name}</span>
+                  <Icon
+                    icon="lucide:file"
+                    width={20}
+                    height={20}
+                    className="text-primary"
+                  />
+                  <span className="text-small truncate max-w-[150px]">
+                    {currentCV.name}
+                  </span>
                   <a
                     href={currentCV.url}
                     target="_blank"
@@ -487,7 +520,9 @@ export const GraduateProfile: React.FC = () => {
                   </a>
                 </div>
               ) : (
-                <div className="text-small text-default-500">No hay CV registrado</div>
+                <div className="text-small text-default-500">
+                  No hay CV registrado
+                </div>
               )}
             </CardBody>
           </Card>
@@ -495,10 +530,17 @@ export const GraduateProfile: React.FC = () => {
           {/* Gestión de CV dentro del grid, debajo de CV Actual */}
           <Card shadow="sm" className="h-3xl">
             <CardHeader className="flex gap-3">
-              <Icon icon="lucide:file-text" width={24} height={24} className="text-secondary" />
+              <Icon
+                icon="lucide:file-text"
+                width={24}
+                height={24}
+                className="text-secondary"
+              />
               <div className="flex flex-col">
                 <p className="text-lg font-semibold">Gestión de CV</p>
-                <p className="text-small text-default-500">Sube o actualiza tu CV</p>
+                <p className="text-small text-default-500">
+                  Sube o actualiza tu CV
+                </p>
               </div>
             </CardHeader>
             <Divider />
@@ -615,7 +657,8 @@ export const GraduateProfile: React.FC = () => {
                             setFormData({ ...formData, cv: null });
                             addToast({
                               title: "CV actualizado",
-                              description: "Tu CV ha sido actualizado correctamente",
+                              description:
+                                "Tu CV ha sido actualizado correctamente",
                               color: "success",
                             });
                           }, 500);
