@@ -183,7 +183,7 @@ export const AdminGraduates: React.FC = () => {
 
     const { id, ...newGraduate } = addGraduate;
 
-    const { error } = await supabase.from("egresados").insert(addGraduate);
+    const { error } = await supabase.from("egresados").insert(newGraduate);
 
     if (error) {
       console.error("Error al registrar egresado:", error.message);
