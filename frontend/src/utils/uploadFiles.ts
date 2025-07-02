@@ -17,8 +17,6 @@ export const uploadFileFromBrowser = async (
       upsert: true,
     });
 
-  console.log(file);
-
   if (uploadError) {
     throw new Error(`Upload failed: ${uploadError.message}`);
   }

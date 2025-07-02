@@ -408,8 +408,6 @@ export const AdminWorkshops: React.FC = () => {
 
       const addTaller = await supabase.from("talleres").insert(workshopWithoutId);
 
-      console.log(addTaller);
-
       setWorkshops([...workshops, newWorkshop]);
       setIsAddModalOpen(false);
 
