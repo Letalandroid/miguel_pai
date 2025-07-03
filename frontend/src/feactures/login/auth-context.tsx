@@ -67,6 +67,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         .order("id", { ascending: false });
 
       if (data) setGraduates(data);
+      console.log(data);
+      
       if (error) console.error(error);
 
       setIsGraduatesLoaded(true); // ✅ Marcar como cargado

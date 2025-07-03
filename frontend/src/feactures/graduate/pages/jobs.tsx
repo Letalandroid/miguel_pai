@@ -19,6 +19,7 @@ import { motion } from "framer-motion";
 import { addToast } from "@heroui/react";
 import { supabase } from "../../../supabase/client";
 import { useAuth } from "../../login/auth-context";
+import { uploadFileFromBrowser } from "../../../utils/uploadFiles";
 
 // Job type definition
 interface Job {
@@ -201,9 +202,25 @@ export const GraduateJobs: React.FC = () => {
 
   // Submit application
   const submitApplication = async () => {
+    let cvUrl = "No definido";
+
     if (!resumeFile) {
       setFileError("Por favor, adjunta tu CV");
       return;
+    } else {
+      const filename = `postulacion_${Date.now()}_${resumeFile.name}`;
+      const bucket = "carta-vitae-postulaciones";
+
+      try {
+        const uploadResult = await uploadFileFromBrowser(
+          resumeFile,
+          filename,
+          bucket
+        );
+        cvUrl = uploadResult.publicUrl;
+      } catch (error) {
+        console.error("Error uploading file:", error);
+      }
     }
 
     if (selectedJob) {
@@ -215,17 +232,14 @@ export const GraduateJobs: React.FC = () => {
       const dataJob = {
         convocatoriaId: selectedJob.id,
         egresadoId: user.id,
-        cvUrl: resumeFile,
+        cvUrl,
         cartaPresentacion: coverLetter,
       };
-
-      console.log(dataJob);
-      
 
       const { error } = await supabase.from("postulaciones").insert(dataJob);
 
       if (error) {
-        setFileError('No se pudo postular, intente más tarde');
+        setFileError("No se pudo postular, intente más tarde");
         console.error(error);
         return;
       }
