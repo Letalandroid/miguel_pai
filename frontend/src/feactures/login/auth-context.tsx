@@ -60,46 +60,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const history = useHistory();
 
   useEffect(() => {
-    const getGraduados = async () => {
-      const { error, data } = await supabase
-        .from("egresados")
-        .select("*")
-        .order("id", { ascending: false });
+    const fetchUsers = async () => {
+      try {
+        const [egresadosRes, empresasRes] = await Promise.all([
+          supabase
+            .from("egresados")
+            .select("*")
+            .order("id", { ascending: false }),
+          supabase
+            .from("empresas")
+            .select("*")
+            .order("id", { ascending: false }),
+        ]);
 
-      if (data) setGraduates(data);
-      console.log(data);
-      
-      if (error) console.error(error);
+        if (egresadosRes.data) setGraduates(egresadosRes.data);
+        if (empresasRes.data) setCompanies(empresasRes.data);
 
-      setIsGraduatesLoaded(true); // ✅ Marcar como cargado
+        if (egresadosRes.error)
+          console.error("Error egresados", egresadosRes.error);
+        if (empresasRes.error)
+          console.error("Error empresas", empresasRes.error);
+      } catch (err) {
+        console.error("Error al cargar usuarios:", err);
+      } finally {
+        setIsGraduatesLoaded(true);
+        setIsCompaniesLoaded(true);
+      }
     };
 
-    getGraduados();
+    fetchUsers();
   }, []);
-
-  useEffect(() => {
-    const getCompanies = async () => {
-      const { error, data } = await supabase
-        .from("empresas")
-        .select("*")
-        .order("id", { ascending: false });
-
-      if (data) setCompanies(data);
-      if (error) console.error(error);
-
-      setIsCompaniesLoaded(true); // ✅ Marcar como cargado
-    };
-
-    getCompanies();
-  }, []);
-
-  // Check if user is already logged in
-  // React.useEffect(() => {
-  //   const storedUser = localStorage.getItem("user");
-  //   if (storedUser) {
-  //     setUser(JSON.parse(storedUser));
-  //   }
-  // }, []);
 
   // Login function
   const login = async (email: string, password: string) => {
