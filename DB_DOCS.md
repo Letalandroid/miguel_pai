@@ -1,6 +1,6 @@
 # Documentación de la Base de Datos
 
-## Introducción
+### Introducción
 
 Esta documentación describe el esquema de la base de datos diseñada para un sistema de gestión de egresados, encargados, empresas y administradores. El sistema soporta la gestión de perfiles de usuarios, calendarios, reuniones, notificaciones, reportes, talleres, convocatorias laborales, eventos, y auditoría de acciones. La base de datos está diseñada para cumplir con los requerimientos funcionales (RF01 a RF07) y no funcionales (RNF01 a RNF04) especificados, asegurando rendimiento, seguridad, usabilidad y mantenibilidad.
 
@@ -8,7 +8,7 @@ El esquema utiliza MySQL y está normalizado para evitar redundancias, con índi
 
 ---
 
-## Propósito General
+### Propósito General
 
 La base de datos soporta un sistema que:
 - Permite a los egresados registrarse, gestionar su perfil, agendar reuniones y participar en talleres (RF01, RF02, RF04).
@@ -20,9 +20,9 @@ La base de datos soporta un sistema que:
 
 ---
 
-## Estructura de la Base de Datos
+### Estructura de la Base de Datos
 
-### Tablas y sus Funciones
+#### Tablas y sus Funciones
 
 1. **Usuario**
    - **Propósito**: Almacena la información común de todos los usuarios del sistema (egresados, encargados, representantes de empresas, administradores).
@@ -126,9 +126,9 @@ La base de datos soporta un sistema que:
 
 ---
 
-## Diccionario de Datos
+### Diccionario de Datos
 
-### Tabla: `Usuario`
+#### Tabla: `Usuario`
 | Campo              | Tipo         | Descripción                                                                 | Restricciones                     |
 |--------------------|--------------|-----------------------------------------------------------------------------|-----------------------------------|
 | `dni`             | varchar(255) | Identificador único del usuario (DNI de la persona).                        | PRIMARY KEY                       |
@@ -145,7 +145,7 @@ La base de datos soporta un sistema que:
 | `estado`          | varchar(20)  | Estado del usuario (activo, suspendido) (RF06.3).                          | DEFAULT 'activo'                  |
 | `ultimo_acceso`   | datetime     | Fecha y hora del último acceso del usuario (RNF03.5).                      |                                   |
 
-### Tabla: `Egresado`
+#### Tabla: `Egresado`
 | Campo               | Tipo         | Descripción                                                                 | Restricciones                     |
 |---------------------|--------------|-----------------------------------------------------------------------------|-----------------------------------|
 | `id`                | varchar(255) | Identificador único del egresado.                                           | PRIMARY KEY                       |
@@ -155,28 +155,28 @@ La base de datos soporta un sistema que:
 | `anio_egreso`       | int          | Año de egreso del egresado (RF01.1).                                       | NOT NULL, INDEX                   |
 | `cv`                | varchar(225) | Ruta o enlace al CV del egresado (RF01.1).                                 |                                   |
 
-### Tabla: `Empresa`
+#### Tabla: `Empresa`
 | Campo          | Tipo         | Descripción                                                                 | Restricciones                     |
 |----------------|--------------|-----------------------------------------------------------------------------|-----------------------------------|
 | `ruc`          | varchar(11)  | Identificador único de la empresa (RUC).                                    | PRIMARY KEY, CHECK (11 dígitos)   |
 | `razon_social` | varchar(150) | Nombre legal de la empresa.                                                | NOT NULL                          |
 | `rubro`        | varchar(100) | Sector o industria de la empresa.                                          |                                   |
 
-### Tabla: `UsuarioEmpresa`
+#### Tabla: `UsuarioEmpresa`
 | Campo            | Tipo         | Descripción                                                                 | Restricciones                     |
 |------------------|--------------|-----------------------------------------------------------------------------|-----------------------------------|
 | `usuario_dni`    | varchar(255) | DNI del usuario que representa a la empresa.                               | PRIMARY KEY, FOREIGN KEY (`Usuario.dni`) |
 | `empresa_ruc`    | varchar(11)  | RUC de la empresa asociada.                                                | PRIMARY KEY, FOREIGN KEY (`Empresa.ruc`) |
 | `rol_en_empresa` | varchar(100) | Rol del usuario en la empresa (ej. Gerente, Contacto).                     |                                   |
 
-### Tabla: `Encargado`
+#### Tabla: `Encargado`
 | Campo         | Tipo         | Descripción                                                                 | Restricciones                     |
 |---------------|--------------|-----------------------------------------------------------------------------|-----------------------------------|
 | `dni`         | varchar(255) | Identificador único del encargado (vincula con `Usuario`).                 | PRIMARY KEY, FOREIGN KEY (`Usuario.dni`) |
 | `usuario_dni` | varchar(255) | DNI del usuario asociado.                                                  | FOREIGN KEY (`Usuario.dni`)       |
 | `area`        | varchar(100) | Área o departamento del encargado.                                         | NOT NULL                          |
 
-### Tabla: `CalendarioEncargado`
+#### Tabla: `CalendarioEncargado`
 | Campo          | Tipo         | Descripción                                                                 | Restricciones                     |
 |----------------|--------------|-----------------------------------------------------------------------------|-----------------------------------|
 | `id`           | int          | Identificador único del calendario.                                        | PRIMARY KEY, AUTO_INCREMENT        |
@@ -185,7 +185,7 @@ La base de datos soporta un sistema que:
 | `hora_fin`     | time         | Hora de fin del horario disponible (RF02.1).                               | NOT NULL                          |
 | `estado`       | varchar(255) | Estado del calendario (ej. activo, inactivo).                              | NOT NULL                          |
 
-### Tabla: `FechasDisponibles`
+#### Tabla: `FechasDisponibles`
 | Campo         | Tipo         | Descripción                                                                 | Restricciones                     |
 |---------------|--------------|-----------------------------------------------------------------------------|-----------------------------------|
 | `id`          | int          | Identificador único de la fecha disponible.                                | PRIMARY KEY, AUTO_INCREMENT        |
@@ -193,7 +193,7 @@ La base de datos soporta un sistema que:
 | `tipo`        | varchar(50)  | Tipo de disponibilidad (egresado, empresa, egresado_empresa) (RF02.1).     | NOT NULL                          |
 | `fecha`       | datetime     | Fecha y hora específica disponible (RF02.2).                               | NOT NULL, INDEX                   |
 
-### Tabla: `Reuniones_egresado_area`
+#### Tabla: `Reuniones_egresado_area`
 | Campo        | Tipo         | Descripción                                                                 | Restricciones                     |
 |--------------|--------------|-----------------------------------------------------------------------------|-----------------------------------|
 | `id`         | int          | Identificador único de la relación.                                        | PRIMARY KEY, AUTO_INCREMENT        |
@@ -201,7 +201,7 @@ La base de datos soporta un sistema que:
 | `reunion`    | int          | ID de la reunión asociada.                                                 | FOREIGN KEY (`Reunion.id`)        |
 | `egresado`   | varchar(255) | ID del egresado asociado.                                                  | FOREIGN KEY (`Egresado.id`)       |
 
-### Tabla: `Estado`
+#### Tabla: `Estado`
 | Campo              | Tipo         | Descripción                                                                 | Restricciones                     |
 |--------------------|--------------|-----------------------------------------------------------------------------|-----------------------------------|
 | `id`               | int          | Identificador único del estado.                                            | PRIMARY KEY, AUTO_INCREMENT        |
@@ -211,7 +211,7 @@ La base de datos soporta un sistema que:
 | `es_final`         | boolean      | Indica si el estado es final (RF02.7).                                     | NOT NULL                          |
 | `permite_transicion`| boolean      | Indica si el estado permite transiciones (RF02.7).                         | NOT NULL                          |
 
-### Tabla: `TransicionEstado`
+#### Tabla: `TransicionEstado`
 | Campo               | Tipo         | Descripción                                                                 | Restricciones                     |
 |---------------------|--------------|-----------------------------------------------------------------------------|-----------------------------------|
 | `id`                | int          | Identificador único de la transición.                                      | PRIMARY KEY, AUTO_INCREMENT        |
@@ -219,7 +219,7 @@ La base de datos soporta un sistema que:
 | `estado_destino_id` | int          | ID del estado final.                                                      | FOREIGN KEY (`Estado.id`)         |
 | `regla_validacion`  | text         | Reglas para validar la transición (RF02.7).                                |                                   |
 
-### Tabla: `HistorialEstado`
+#### Tabla: `HistorialEstado`
 | Campo               | Tipo         | Descripción                                                                 | Restricciones                     |
 |---------------------|--------------|-----------------------------------------------------------------------------|-----------------------------------|
 | `id`                | int          | Identificador único del historial.                                         | PRIMARY KEY, AUTO_INCREMENT        |
@@ -230,7 +230,7 @@ La base de datos soporta un sistema que:
 | `estado_anterior_id`| int          | ID del estado anterior.                                                   | FOREIGN KEY (`Estado.id`)         |
 | `estado_nuevo_id`   | int          | ID del estado nuevo.                                                      | FOREIGN KEY (`Estado.id`)         |
 
-### Tabla: `DisponibilidadEmpresa`
+#### Tabla: `DisponibilidadEmpresa`
 | Campo                 | Tipo         | Descripción                                                                 | Restricciones                     |
 |-----------------------|--------------|-----------------------------------------------------------------------------|-----------------------------------|
 | `id`                  | int          | Identificador único de la disponibilidad.                                  | PRIMARY KEY, AUTO_INCREMENT        |
@@ -238,7 +238,7 @@ La base de datos soporta un sistema que:
 | `calendario_encargado_id`| int       | ID del calendario asociado.                                                | FOREIGN KEY (`CalendarioEncargado.id`) |
 | `fecha_creacion`      | datetime     | Fecha de creación de la disponibilidad (RF02.4).                           | NOT NULL                          |
 
-### Tabla: `SlotDisponible`
+#### Tabla: `SlotDisponible`
 | Campo            | Tipo         | Descripción                                                                 | Restricciones                     |
 |------------------|--------------|-----------------------------------------------------------------------------|-----------------------------------|
 | `id`             | int          | Identificador único del slot.                                              | PRIMARY KEY, AUTO_INCREMENT        |
@@ -247,7 +247,7 @@ La base de datos soporta un sistema que:
 | `fecha_hora`     | datetime     | Fecha y hora del slot (RF02.2).                                           | NOT NULL                          |
 | `estado_id`      | int          | ID del estado del slot (RF02.3).                                          | FOREIGN KEY (`Estado.id`)         |
 
-### Tabla: `Reunion`
+#### Tabla: `Reunion`
 | Campo              | Tipo         | Descripción                                                                 | Restricciones                     |
 |--------------------|--------------|-----------------------------------------------------------------------------|-----------------------------------|
 | `id`               | int          | Identificador único de la reunión.                                         | PRIMARY KEY, AUTO_INCREMENT        |
@@ -258,7 +258,7 @@ La base de datos soporta un sistema que:
 | `cv_egresado`      | longblob     | CV del egresado asociado (RF02.4).                                        |                                   |
 | `estado_id`        | int          | ID del estado de la reunión (RF02.7).                                     | FOREIGN KEY (`Estado.id`)         |
 
-### Tabla: `Taller`
+#### Tabla: `Taller`
 | Campo           | Tipo         | Descripción                                                                 | Restricciones                     |
 |-----------------|--------------|-----------------------------------------------------------------------------|-----------------------------------|
 | `id`            | int          | Identificador único del taller.                                            | PRIMARY KEY, AUTO_INCREMENT        |
@@ -270,7 +270,7 @@ La base de datos soporta un sistema que:
 | `encargado_dni` | varchar(255) | DNI del encargado responsable.                                            | FOREIGN KEY (`Encargado.dni`)     |
 | `estado_id`     | int          | ID del estado del taller.                                                 | FOREIGN KEY (`Estado.id`)         |
 
-### Tabla: `ConvocatoriaLaboral`
+#### Tabla: `ConvocatoriaLaboral`
 | Campo            | Tipo         | Descripción                                                                 | Restricciones                     |
 |------------------|--------------|-----------------------------------------------------------------------------|-----------------------------------|
 | `id`             | int          | Identificador único de la convocatoria.                                    | PRIMARY KEY, AUTO_INCREMENT        |
@@ -282,7 +282,7 @@ La base de datos soporta un sistema que:
 | `fecha_cierre`   | datetime     | Fecha de cierre de la convocatoria.                                       | NOT NULL                          |
 | `estado_id`      | int          | ID del estado de la convocatoria.                                         | FOREIGN KEY (`Estado.id`)         |
 
-### Tabla: `Evento`
+#### Tabla: `Evento`
 | Campo            | Tipo         | Descripción                                                                 | Restricciones                     |
 |------------------|--------------|-----------------------------------------------------------------------------|-----------------------------------|
 | `id`             | int          | Identificador único del evento.                                            | PRIMARY KEY, AUTO_INCREMENT        |
@@ -296,7 +296,7 @@ La base de datos soporta un sistema que:
 | `flyer`          | longblob     | Imagen promocional del evento.                                            |                                   |
 | `estado_id`      | int          | ID del estado del evento.                                                 | FOREIGN KEY (`Estado.id`)         |
 
-### Tabla: `Notificacion`
+#### Tabla: `Notificacion`
 | Campo            | Tipo         | Descripción                                                                 | Restricciones                     |
 |------------------|--------------|-----------------------------------------------------------------------------|-----------------------------------|
 | `id`             | int          | Identificador único de la notificación.                                    | PRIMARY KEY, AUTO_INCREMENT        |
@@ -307,14 +307,14 @@ La base de datos soporta un sistema que:
 | `leida`          | boolean      | Indica si la notificación ha sido leída (RF04.4).                         | DEFAULT FALSE                     |
 | `estado_id`      | int          | ID del estado de la notificación.                                         | FOREIGN KEY (`Estado.id`)         |
 
-### Tabla: `EgresadoTaller`
+#### Tabla: `EgresadoTaller`
 | Campo             | Tipo         | Descripción                                                                 | Restricciones                     |
 |-------------------|--------------|-----------------------------------------------------------------------------|-----------------------------------|
 | `egresado_dni`    | varchar(255) | ID del egresado inscrito.                                                 | PRIMARY KEY, FOREIGN KEY (`Egresado.id`) |
 | `taller_id`       | int          | ID del taller asociado.                                                   | PRIMARY KEY, FOREIGN KEY (`Taller.id`) |
 | `fecha_inscripcion`| datetime     | Fecha de inscripción del egresado al taller.                              | NOT NULL                          |
 
-### Tabla: `Reporte`
+#### Tabla: `Reporte`
 | Campo             | Tipo         | Descripción                                                                 | Restricciones                     |
 |-------------------|--------------|-----------------------------------------------------------------------------|-----------------------------------|
 | `id`              | int          | Identificador único del reporte.                                           | PRIMARY KEY, AUTO_INCREMENT        |
@@ -325,7 +325,7 @@ La base de datos soporta un sistema que:
 
 ---
 
-## Relaciones entre Tablas
+### Relaciones entre Tablas
 
 1. **Usuario → Egresado, Encargado, UsuarioEmpresa, Notificacion, Reporte**
    - **Relación**: Uno a muchos.
@@ -404,7 +404,7 @@ La base de datos soporta un sistema que:
 
 ---
 
-## Resumen de Relaciones
+### Resumen de Relaciones
 
 - **Usuario** es la tabla central, vinculando todos los perfiles (`Egresado`, `Encargado`, `UsuarioEmpresa`) y soportando autenticación, notificaciones, y reportes.
 - **Empresa** se identifica por `ruc` y se relaciona con usuarios a través de `UsuarioEmpresa`, permitiendo múltiples representantes.
@@ -417,7 +417,7 @@ La base de datos soporta un sistema que:
 
 ---
 
-## Consideraciones Finales
+### Consideraciones Finales
 
 - **Integridad**: Las claves foráneas y restricciones `CHECK` aseguran la consistencia de los datos.
 - **Rendimiento**: Los índices en `email`, `carrera_profesional`, `anio_egreso`, y `fecha` optimizan consultas frecuentes (RNF01).
