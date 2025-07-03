@@ -190,6 +190,7 @@ export const AdminWorkshops: React.FC = () => {
     date: "",
     time: "",
     link: "",
+    status: "",
     maxParticipants: "",
     image: null as File | null,
   });
@@ -201,6 +202,7 @@ export const AdminWorkshops: React.FC = () => {
     date: "",
     time: "",
     link: "",
+    status: "",
     maxParticipants: "",
     image: "",
   });
@@ -314,6 +316,7 @@ export const AdminWorkshops: React.FC = () => {
       date: "",
       time: "",
       link: "",
+      status: "",
       maxParticipants: "",
       image: "",
     };
@@ -418,6 +421,7 @@ export const AdminWorkshops: React.FC = () => {
         date: "",
         time: "",
         link: "",
+        status: "",
         maxParticipants: "",
         image: null,
       });
@@ -440,6 +444,7 @@ export const AdminWorkshops: React.FC = () => {
         description: formData.description,
         date: `${formData.date}T${formData.time}`,
         link: formData.link,
+        status: formData.status as Workshop['status'],
         maxParticipants: parseInt(formData.maxParticipants),
         image: formData.image
           ? URL.createObjectURL(formData.image) // ⚠ solo para vista previa
@@ -534,6 +539,7 @@ export const AdminWorkshops: React.FC = () => {
       description: workshop.description,
       date: date,
       time: time,
+      status,
       link: workshop.link || "",
       maxParticipants: workshop.maxParticipants.toString(),
       image: null,
@@ -1047,6 +1053,23 @@ export const AdminWorkshops: React.FC = () => {
                     minRows={3}
                     isRequired
                   />
+
+                  <Select
+                    label="Estado"
+                    placeholder="Seleccione el estado"
+                    selectedKeys={formData.status ? [formData.status] : []}
+                    onSelectionChange={(keys) => {
+                      const value = Array.from(keys)[0];
+                      handleChange("status", `${value}`);
+                    }}
+                    isInvalid={!!errors.status}
+                    errorMessage={errors.status}
+                    isRequired
+                  >
+                    <SelectItem key="upcoming">Próximo</SelectItem>
+                    <SelectItem key="active">Activo</SelectItem>
+                    <SelectItem key="completed">Completado</SelectItem>
+                  </Select>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <Input

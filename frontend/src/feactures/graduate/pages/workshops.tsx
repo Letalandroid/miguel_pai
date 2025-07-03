@@ -25,7 +25,7 @@ interface Workshop {
   title: string;
   description: string;
   date: string;
-  status: "open" | "closed";
+  status: "active" | "closed";
   image: string;
   link?: string;
   enrolled: boolean;
@@ -39,7 +39,7 @@ const workshopsMock: Workshop[] = [
     description:
       "Aprende a desarrollar habilidades de comunicación, trabajo en equipo y liderazgo que son fundamentales en el entorno laboral actual.",
     date: "2023-06-20T14:00:00",
-    status: "open",
+    status: "active",
     image: "https://img.heroui.chat/image/ai?w=600&h=400&u=workshop1",
     link: "https://meet.google.com/abc-defg-hij",
     enrolled: true,
@@ -50,7 +50,7 @@ const workshopsMock: Workshop[] = [
     description:
       "Descubre las claves para desarrollar proyectos innovadores y emprender con éxito en el mercado actual.",
     date: "2023-06-25T09:00:00",
-    status: "open",
+    status: "active",
     image: "https://img.heroui.chat/image/ai?w=600&h=400&u=workshop2",
     link: "https://meet.google.com/klm-nopq-rst",
     enrolled: true,
@@ -61,7 +61,7 @@ const workshopsMock: Workshop[] = [
     description:
       "Conoce y aprende a utilizar las principales herramientas digitales que potenciarán tu perfil profesional.",
     date: "2023-07-05T16:30:00",
-    status: "open",
+    status: "active",
     image: "https://img.heroui.chat/image/ai?w=600&h=400&u=workshop3",
     link: "https://meet.google.com/uvw-xyz-123",
     enrolled: false,
@@ -72,7 +72,7 @@ const workshopsMock: Workshop[] = [
     description:
       "Aprende a crear un perfil de LinkedIn atractivo y efectivo para destacar en el mercado laboral.",
     date: "2023-07-10T10:00:00",
-    status: "open",
+    status: "active",
     image: "https://img.heroui.chat/image/ai?w=600&h=400&u=workshop4",
     link: "https://meet.google.com/456-789-012",
     enrolled: false,
@@ -93,7 +93,7 @@ export const GraduateWorkshops: React.FC = () => {
   const [workshops, setWorkshops] = React.useState<Workshop[]>([]);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<
-    "all" | "open" | "closed" | "enrolled"
+    "all" | "active" | "closed" | "enrolled"
   >("all");
   const [selectedWorkshop, setSelectedWorkshop] =
     React.useState<Workshop | null>(null);
@@ -124,8 +124,8 @@ export const GraduateWorkshops: React.FC = () => {
       workshop.description.toLowerCase().includes(searchTerm.toLowerCase());
 
     if (statusFilter === "all") return matchesSearch;
-    if (statusFilter === "open")
-      return matchesSearch && workshop.status === "open";
+    if (statusFilter === "active")
+      return matchesSearch && workshop.status === "active";
     if (statusFilter === "closed")
       return matchesSearch && workshop.status === "closed";
     if (statusFilter === "enrolled") return matchesSearch && workshop.enrolled;
@@ -245,10 +245,10 @@ export const GraduateWorkshops: React.FC = () => {
                 Todos
               </Button>
               <Button
-                color={statusFilter === "open" ? "success" : "default"}
-                variant={statusFilter === "open" ? "flat" : "light"}
+                color={statusFilter === "active" ? "success" : "default"}
+                variant={statusFilter === "active" ? "flat" : "light"}
                 size="sm"
-                onPress={() => setStatusFilter("open")}
+                onPress={() => setStatusFilter("active")}
               >
                 Abiertos
               </Button>
@@ -296,11 +296,11 @@ export const GraduateWorkshops: React.FC = () => {
                   <div className="flex justify-between items-start">
                     <h3 className="text-lg font-semibold">{workshop.title}</h3>
                     <Chip
-                      color={workshop.status === "open" ? "success" : "danger"}
+                      color={workshop.status === "active" ? "success" : "danger"}
                       variant="flat"
                       size="sm"
                     >
-                      {workshop.status === "open" ? "Abierto" : "Cerrado"}
+                      {workshop.status === "active" ? "Abierto" : "Cerrado"}
                     </Chip>
                   </div>
 
@@ -333,7 +333,7 @@ export const GraduateWorkshops: React.FC = () => {
                   >
                     Ver Detalles
                   </Button>
-                  {workshop.status === "open" && !workshop.enrolled && (
+                  {workshop.status === "active" && !workshop.enrolled && (
                     <Button
                       color="success"
                       fullWidth
@@ -384,13 +384,13 @@ export const GraduateWorkshops: React.FC = () => {
                   <div className="flex flex-wrap gap-2 mt-4">
                     <Chip
                       color={
-                        selectedWorkshop.status === "open"
+                        selectedWorkshop.status === "active"
                           ? "success"
                           : "danger"
                       }
                       variant="flat"
                     >
-                      {selectedWorkshop.status === "open"
+                      {selectedWorkshop.status === "active"
                         ? "Abierto"
                         : "Cerrado"}
                     </Chip>
@@ -444,7 +444,7 @@ export const GraduateWorkshops: React.FC = () => {
                   <Button color="default" variant="light" onPress={onClose}>
                     Cerrar
                   </Button>
-                  {selectedWorkshop.status === "open" &&
+                  {selectedWorkshop.status === "active" &&
                     !selectedWorkshop.enrolled && (
                       <Button
                         color="success"
