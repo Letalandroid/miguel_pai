@@ -341,8 +341,8 @@ export const AdminGraduates: React.FC = () => {
     });
 
     addToast({
-      title: "Egresado registrado",
-      description: "El egresado ha sido registrado correctamente",
+      title: "Empresa registrado",
+      description: "La empresa ha sido registrado correctamente",
       color: "success",
     });
   };
