@@ -88,7 +88,6 @@ export const GraduateDashboard: React.FC = () => {
         .order("id", { ascending: false });
 
       setJobs(data);
-      console.log(data);
 
       if (error) {
         throw error;

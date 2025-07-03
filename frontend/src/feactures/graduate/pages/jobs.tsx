@@ -18,6 +18,7 @@ import { Icon } from "@iconify/react";
 import { motion } from "framer-motion";
 import { addToast } from "@heroui/react";
 import { supabase } from "../../../supabase/client";
+import { useAuth } from "../../login/auth-context";
 
 // Job type definition
 interface Job {
@@ -127,6 +128,7 @@ export const GraduateJobs: React.FC = () => {
   const [resumeFile, setResumeFile] = React.useState<File | null>(null);
   const [coverLetter, setCoverLetter] = React.useState("");
   const [fileError, setFileError] = React.useState("");
+  const { user } = useAuth();
 
   useEffect(() => {
     const getConvocatorias = async () => {
@@ -198,7 +200,7 @@ export const GraduateJobs: React.FC = () => {
   };
 
   // Submit application
-  const submitApplication = () => {
+  const submitApplication = async () => {
     if (!resumeFile) {
       setFileError("Por favor, adjunta tu CV");
       return;
@@ -209,6 +211,24 @@ export const GraduateJobs: React.FC = () => {
       const updatedJobs = jobs.map((j) =>
         j.id === selectedJob.id ? { ...j, applied: true } : j
       );
+
+      const dataJob = {
+        convocatoriaId: selectedJob.id,
+        egresadoId: user.id,
+        cvUrl: resumeFile,
+        cartaPresentacion: coverLetter,
+      };
+
+      console.log(dataJob);
+      
+
+      const { error } = await supabase.from("postulaciones").insert(dataJob);
+
+      if (error) {
+        setFileError('No se pudo postular, intente más tarde');
+        console.error(error);
+        return;
+      }
 
       setJobs(updatedJobs);
       setIsApplyModalOpen(false);
