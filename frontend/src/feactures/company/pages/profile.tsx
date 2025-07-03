@@ -19,13 +19,13 @@ export const CompanyProfile: React.FC = () => {
 
   // Form state
   const [formData, setFormData] = React.useState({
-    ruc: "20123456789",
-    companyName: "Empresa ABC",
-    industry: "Tecnología",
-    phone: "987654321",
-    email: user?.email || "",
-    website: "www.empresaabc.com",
-    address: "Av. Principal 123, Lima",
+    ruc: user?.ruc,
+    companyName: user?.name,
+    industry: user?.rubro,
+    phone: user?.phone,
+    email: user?.email,
+    website: user?.site,
+    address: user?.address,
   });
 
   // Form errors

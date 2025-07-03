@@ -14,6 +14,11 @@ export interface User {
   phone?: string;
   status?: string;
   email: string;
+  ruc?: string;
+  razonSocial?: string;
+  rubro?: string;
+  site?: string;
+  address?: string;
   role: UserRole;
 }
 
