@@ -48,7 +48,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [user, setUser] = React.useState<User | null>(null);
   const [graduates, setGraduates] = React.useState<User[]>([]);
+  const [companies, setCompanies] = React.useState<User[]>([]);
   const [isGraduatesLoaded, setIsGraduatesLoaded] = React.useState(false);
+  const [isCompaniesLoaded, setIsCompaniesLoaded] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
   const history = useHistory();
 
@@ -66,6 +68,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     };
 
     getGraduados();
+  }, []);
+
+  useEffect(() => {
+    const getCompanies = async () => {
+      const { error, data } = await supabase
+        .from("empresas")
+        .select("*")
+        .order("id", { ascending: false });
+
+      if (data) setCompanies(data);
+      if (error) console.error(error);
+
+      setIsCompaniesLoaded(true); // ✅ Marcar como cargado
+    };
+
+    getCompanies();
   }, []);
 
   // Check if user is already logged in
@@ -93,6 +111,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         });
       }
 
+      if (!isCompaniesLoaded) {
+        await new Promise((resolve) => {
+          const check = setInterval(() => {
+            if (isCompaniesLoaded) {
+              clearInterval(check);
+              resolve(true);
+            }
+          }, 100);
+        });
+      }
+
       await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulación
 
       const foundUser = mockUsers.find(
@@ -103,11 +132,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         (u) => u.email.toLowerCase() === email.toLowerCase()
       );
 
-      if ((foundUser || graduateUser) && password === "password") {
-        const user = foundUser || { ...graduateUser };
-        console.log(user);
-        
+      const companyUser = companies.find(
+        (u) => u.email.toLowerCase() === email.toLowerCase()
+      );
 
+      const user = foundUser ?? graduateUser ?? companyUser;
+
+      if (user && password === "password") {
         setUser(user);
         localStorage.setItem("user", JSON.stringify(user));
 
