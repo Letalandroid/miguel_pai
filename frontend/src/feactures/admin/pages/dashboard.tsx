@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import {
   Card,
@@ -13,6 +13,7 @@ import {
 import { Icon } from "@iconify/react";
 import { motion } from "framer-motion";
 import { useAuth } from "../../login/auth-context";
+import { supabase } from "../../../supabase/client";
 
 // Mock data
 const upcomingEvents = [
@@ -94,6 +95,42 @@ const meetings = [
 
 export const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
+  const [workshops, setWorkshops] = useState([]);
+  const [jobs, setJobs] = useState([]);
+
+  useEffect(() => {
+    const getTalleres = async () => {
+      const { error, data } = await supabase
+        .from("talleres")
+        .select("*")
+        .order("id", { ascending: false });
+
+      setWorkshops(data);
+
+      if (error) {
+        throw error;
+      }
+    };
+
+    getTalleres();
+  }, []);
+
+  useEffect(() => {
+    const getConvocatorias = async () => {
+      const { error, data } = await supabase
+        .from("convocatorias")
+        .select("*")
+        .order("id", { ascending: false });
+
+      setJobs(data);
+
+      if (error) {
+        throw error;
+      }
+    };
+
+    getConvocatorias();
+  }, []);
 
   // Format date to readable string
   const formatDate = (dateString: string) => {
@@ -333,9 +370,9 @@ export const AdminDashboard: React.FC = () => {
             </CardHeader>
             <Divider />
             <CardBody>
-              {jobOpenings.length > 0 ? (
+              {jobs.length > 0 ? (
                 <div className="space-y-4">
-                  {jobOpenings.map((job) => (
+                  {jobs.map((job) => (
                     <div
                       key={job.id}
                       className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 p-3 bg-content2 rounded-lg"

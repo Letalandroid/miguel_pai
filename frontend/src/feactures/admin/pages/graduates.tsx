@@ -28,36 +28,28 @@ interface Graduate {
   email: string;
   phone: string;
   career: string;
+  role: string;
   graduationYear: string;
   status: "active" | "inactive";
 }
 
-// Datos mock
-const graduatesMock: Graduate[] = [
-  {
-    id: "1",
-    name: "Juan Pérez",
-    email: "juan.perez@example.com",
-    phone: "987654321",
-    career: "Ingeniería de Sistemas",
-    graduationYear: "2022",
-    status: "active",
-  },
-  {
-    id: "2",
-    name: "María López",
-    email: "maria.lopez@example.com",
-    phone: "987654322",
-    career: "Administración",
-    graduationYear: "2021",
-    status: "inactive",
-  },
-];
+interface Company {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  career: string;
+  role: string;
+  graduationYear: string;
+  status: "active" | "inactive";
+}
 
 export const AdminGraduates: React.FC = () => {
   const [graduates, setGraduates] = React.useState<Graduate[]>([]);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
+  const [isAddModalCompanyOpen, setIsAddModalCompanyOpen] =
+    React.useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
   const [selectedGraduate, setSelectedGraduate] =
     React.useState<Graduate | null>(null);
@@ -86,7 +78,7 @@ export const AdminGraduates: React.FC = () => {
         .select("*")
         .order("id", { ascending: false });
 
-        setGraduates(data);
+      setGraduates(data);
 
       if (error) {
         throw error;
@@ -177,6 +169,52 @@ export const AdminGraduates: React.FC = () => {
       email: formData.email,
       phone: formData.phone,
       career: formData.career,
+      role: "graduate",
+      graduationYear: formData.graduationYear,
+      status: "active",
+    };
+
+    const { id, ...newGraduate } = addGraduate;
+
+    const { error } = await supabase.from("egresados").insert(newGraduate);
+
+    if (error) {
+      console.error("Error al registrar egresado:", error.message);
+      addToast({
+        title: "Error",
+        description: "No se pudo registrar al egresado",
+        color: "danger",
+      });
+      return;
+    }
+
+    setGraduates([...graduates, addGraduate]);
+    setIsAddModalOpen(false);
+    setFormData({
+      name: "",
+      email: "",
+      phone: "",
+      career: "",
+      graduationYear: "",
+    });
+
+    addToast({
+      title: "Egresado registrado",
+      description: "El egresado ha sido registrado correctamente",
+      color: "success",
+    });
+  };
+
+  const handleAddCompany = async () => {
+    if (!validateForm()) return;
+
+    const addGraduate: Company = {
+      id: (graduates.length + 1).toString(),
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+      career: formData.career,
+      role: "company",
       graduationYear: formData.graduationYear,
       status: "active",
     };
@@ -311,6 +349,7 @@ export const AdminGraduates: React.FC = () => {
         email: row["Correo"] || row["email"] || "",
         phone: row["Teléfono"] || row["phone"] || "",
         career: row["Carrera"] || row["career"] || "",
+        role: row["Role"] || row["role"] || "",
         graduationYear: row["Año de Egreso"] || row["graduationYear"] || "",
         status: "active",
       }));
@@ -389,6 +428,13 @@ export const AdminGraduates: React.FC = () => {
               onPress={() => setIsAddModalOpen(true)}
             >
               Registrar Egresado
+            </Button>
+            <Button
+              color="primary"
+              startContent={<Icon icon="lucide:plus" width={18} height={18} />}
+              onPress={() => setIsAddModalCompanyOpen(true)}
+            >
+              Registrar Empresa
             </Button>
             <Button
               color="secondary"
@@ -558,6 +604,81 @@ export const AdminGraduates: React.FC = () => {
                   Cancelar
                 </Button>
                 <Button color="primary" onPress={handleAddGraduate}>
+                  Registrar
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+      {/* Modal de registro Empresa */}
+      <Modal
+        isOpen={isAddModalCompanyOpen}
+        onOpenChange={setIsAddModalCompanyOpen}
+        size="3xl"
+      >
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1">
+                Registrar Nueva Empresa
+              </ModalHeader>
+              <ModalBody>
+                <div className="space-y-4">
+                  <Input
+                    label="Nombre Completo"
+                    placeholder="Ingrese el nombre completo"
+                    value={formData.name}
+                    onValueChange={(value) => handleChange("name", value)}
+                    isInvalid={!!errors.name}
+                    errorMessage={errors.name}
+                    isRequired
+                  />
+                  <Input
+                    label="Correo Electrónico"
+                    placeholder="Ingrese el correo electrónico"
+                    value={formData.email}
+                    onValueChange={(value) => handleChange("email", value)}
+                    isInvalid={!!errors.email}
+                    errorMessage={errors.email}
+                    isRequired
+                  />
+                  <Input
+                    label="Teléfono"
+                    placeholder="Ingrese el teléfono"
+                    value={formData.phone}
+                    onValueChange={(value) => handleChange("phone", value)}
+                    isInvalid={!!errors.phone}
+                    errorMessage={errors.phone}
+                    isRequired
+                  />
+                  <Input
+                    label="Carrera"
+                    placeholder="Ingrese la carrera"
+                    value={formData.career}
+                    onValueChange={(value) => handleChange("career", value)}
+                    isInvalid={!!errors.career}
+                    errorMessage={errors.career}
+                    isRequired
+                  />
+                  <Input
+                    label="Año de Egreso"
+                    placeholder="Ingrese el año de egreso"
+                    value={formData.graduationYear}
+                    onValueChange={(value) =>
+                      handleChange("graduationYear", value)
+                    }
+                    isInvalid={!!errors.graduationYear}
+                    errorMessage={errors.graduationYear}
+                    isRequired
+                  />
+                </div>
+              </ModalBody>
+              <ModalFooter>
+                <Button color="default" variant="light" onPress={onClose}>
+                  Cancelar
+                </Button>
+                <Button color="primary" onPress={handleAddCompany}>
                   Registrar
                 </Button>
               </ModalFooter>

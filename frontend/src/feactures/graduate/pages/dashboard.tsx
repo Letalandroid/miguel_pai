@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import {
   Card,
@@ -13,6 +13,7 @@ import {
 import { Icon } from "@iconify/react";
 import { motion } from "framer-motion";
 import { useAuth } from "../../login/auth-context";
+import { supabase } from "../../../supabase/client";
 
 // Mock data
 const upcomingMeetings = [
@@ -77,6 +78,25 @@ const notifications = [
 
 export const GraduateDashboard: React.FC = () => {
   const { user } = useAuth();
+  const [jobs, setJobs] = useState([]);
+
+  useEffect(() => {
+    const getConvocatorias = async () => {
+      const { error, data } = await supabase
+        .from("convocatorias")
+        .select("*")
+        .order("id", { ascending: false });
+
+      setJobs(data);
+      console.log(data);
+
+      if (error) {
+        throw error;
+      }
+    };
+
+    getConvocatorias();
+  }, []);
 
   // Format date to readable string
   const formatDate = (dateString: string) => {
@@ -303,7 +323,11 @@ export const GraduateDashboard: React.FC = () => {
                         )}
                         <div>
                           <p
-                            className={`font-medium ${!notification.read ? "text-foreground-900" : "text-foreground-600"}`}
+                            className={`font-medium ${
+                              !notification.read
+                                ? "text-foreground-900"
+                                : "text-foreground-600"
+                            }`}
                           >
                             {notification.title}
                           </p>
@@ -359,9 +383,9 @@ export const GraduateDashboard: React.FC = () => {
           </CardHeader>
           <Divider />
           <CardBody>
-            {jobOpenings.length > 0 ? (
+            {jobs.length > 0 ? (
               <div className="space-y-4">
-                {jobOpenings.map((job) => (
+                {jobs.map((job) => (
                   <div
                     key={job.id}
                     className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2"
@@ -373,17 +397,28 @@ export const GraduateDashboard: React.FC = () => {
                       </p>
                     </div>
                     <div className="flex items-center gap-2 ml-auto">
-                      <Chip color="success" variant="flat" size="sm">
-                        Cierra: {new Date(job.closingDate).toLocaleDateString()}
-                      </Chip>
-                      <Button
-                        as={RouterLink}
-                        to="/graduate/jobs"
-                        size="sm"
-                        color="success"
-                      >
-                        Postular
-                      </Button>
+                      {job.status === "active" ? (
+                        <Chip color="success" variant="flat" size="sm">
+                          Cierra:{" "}
+                          {new Date(job.closingDate).toLocaleDateString()}
+                        </Chip>
+                      ) : (
+                        <Chip color="danger" variant="flat" size="sm">
+                          Cerró
+                        </Chip>
+                      )}
+                      {job.status === "active" ? (
+                        <Button
+                          as={RouterLink}
+                          to="/graduate/jobs"
+                          size="sm"
+                          color="success"
+                        >
+                          Postular
+                        </Button>
+                      ) : (
+                        ""
+                      )}
                     </div>
                   </div>
                 ))}
