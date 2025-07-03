@@ -328,7 +328,7 @@ export const AdminGraduates: React.FC = () => {
     }
 
     setCompanies([...companies, addCompany]);
-    setIsAddModalOpen(false);
+    setIsAddModalCompanyOpen(false);
     setFormCompany({
       name: "",
       ruc: "",
