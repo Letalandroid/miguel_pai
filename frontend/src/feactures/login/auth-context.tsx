@@ -104,7 +104,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       );
 
       if ((foundUser || graduateUser) && password === "password") {
-        const user = foundUser || { ...graduateUser, role: "graduate" };
+        const user = foundUser || { ...graduateUser };
+        console.log(user);
+        
 
         setUser(user);
         localStorage.setItem("user", JSON.stringify(user));
