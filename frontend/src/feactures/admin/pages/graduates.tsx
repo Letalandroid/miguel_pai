@@ -299,8 +299,8 @@ export const AdminGraduates: React.FC = () => {
   const handleAddCompany = async () => {
     if (!validateCompanyForm()) return;
 
-    const addGraduate: Company = {
-      id: (graduates.length + 1).toString(),
+    const addCompany: Company = {
+      id: (companies.length + 1).toString(),
       name: formCompany.name,
       ruc: formCompany.ruc,
       razonSocial: formCompany.razonSocial,
@@ -313,9 +313,9 @@ export const AdminGraduates: React.FC = () => {
       status: "active",
     };
 
-    const { id, ...newGraduate } = addGraduate;
+    const { id, ...newCompany } = addCompany;
 
-    const { error } = await supabase.from("empresas").insert(newGraduate);
+    const { error } = await supabase.from("empresas").insert(newCompany);
 
     if (error) {
       console.error("Error al registrar egresado:", error.message);
@@ -327,7 +327,7 @@ export const AdminGraduates: React.FC = () => {
       return;
     }
 
-    // setGraduates([...graduates, addGraduate]);
+    setCompanies([...companies, addCompany]);
     setIsAddModalOpen(false);
     setFormCompany({
       name: "",
