@@ -596,8 +596,7 @@ export const AdminGraduates: React.FC = () => {
                       </Chip>
                     </div>
                     <p className="text-default-600 mb-1">
-                      {company.razonSocial || ""} | RUC:{" "}
-                      {company.ruc || ""}
+                      {company.razonSocial || ""} | RUC: {company.ruc || ""}
                     </p>
                     <p className="text-small text-default-500">
                       {company.email || ""} | {company.phone || ""}
