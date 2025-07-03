@@ -274,9 +274,9 @@ export const AdminJobs: React.FC = () => {
           name: egresado?.name,
           email: egresado?.email,
           phone: egresado?.celular,
-          applicationDate: p.fecha_postulacion ?? new Date(),
+          applicationDate: p.fechaPostulacion ?? new Date(),
           status: p.estado || "pending",
-          cv: p.cvUrl, // asegúrate de que así se llama en tu tabla
+          cv: p.cvUrl || "#", // asegúrate de que así se llama en tu tabla
         };
       });
   };
