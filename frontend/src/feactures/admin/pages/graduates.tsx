@@ -36,16 +36,20 @@ interface Graduate {
 interface Company {
   id: string;
   name: string;
-  email: string;
+  ruc: string;
+  razonSocial: string;
+  rubro: string;
   phone: string;
-  career: string;
+  email: string;
+  site: string;
+  address: string;
   role: string;
-  graduationYear: string;
   status: "active" | "inactive";
 }
 
 export const AdminGraduates: React.FC = () => {
   const [graduates, setGraduates] = React.useState<Graduate[]>([]);
+  const [companies, setCompanies] = React.useState<Company[]>([]);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
   const [isAddModalCompanyOpen, setIsAddModalCompanyOpen] =
@@ -60,12 +64,32 @@ export const AdminGraduates: React.FC = () => {
     career: "",
     graduationYear: "",
   });
+  const [formCompany, setFormCompany] = React.useState({
+    name: "",
+    ruc: "",
+    razonSocial: "",
+    rubro: "",
+    phone: "",
+    email: "",
+    site: "",
+    address: "",
+  });
   const [errors, setErrors] = React.useState({
     name: "",
     email: "",
     phone: "",
     career: "",
     graduationYear: "",
+  });
+  const [errorsCompany, setErrorsCompany] = React.useState({
+    name: "",
+    ruc: "",
+    razonSocial: "",
+    rubro: "",
+    phone: "",
+    email: "",
+    site: "",
+    address: "",
   });
   const [excelModalOpen, setExcelModalOpen] = React.useState(false);
   const [excelData, setExcelData] = React.useState<any[]>([]);
@@ -88,12 +112,35 @@ export const AdminGraduates: React.FC = () => {
     getGraduados();
   }, []);
 
+  useEffect(() => {
+    const getCompanies = async () => {
+      const { error, data } = await supabase
+        .from("empresas")
+        .select("*")
+        .order("id", { ascending: false });
+
+      setCompanies(data);
+
+      if (error) {
+        throw error;
+      }
+    };
+
+    getCompanies();
+  }, []);
+
   // Filtro de búsqueda
   const filteredGraduates = graduates.filter(
     (g) =>
       g.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       g.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       g.career.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredCompanies = companies.filter(
+    (g) =>
+      g.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      g.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Colores de estado
@@ -127,6 +174,14 @@ export const AdminGraduates: React.FC = () => {
     }
   };
 
+  // Manejo de formulario empresa
+  const handleChangeCompany = (field: string, value: string) => {
+    setFormCompany({ ...formCompany, [field]: value });
+    if (errors[field as keyof typeof errors]) {
+      setErrorsCompany({ ...errorsCompany, [field]: "" });
+    }
+  };
+
   const validateForm = () => {
     const newErrors = {
       name: "",
@@ -157,6 +212,42 @@ export const AdminGraduates: React.FC = () => {
       isValid = false;
     }
     setErrors(newErrors);
+    return isValid;
+  };
+
+  const validateCompanyForm = () => {
+    const newErrors = {
+      name: "",
+      ruc: "",
+      razonSocial: "",
+      rubro: "",
+      phone: "",
+      email: "",
+      site: "",
+      address: "",
+    };
+    let isValid = true;
+    if (!formCompany.name.trim()) {
+      newErrors.name = "El nombre es obligatorio";
+      isValid = false;
+    }
+    if (!formCompany.email.trim()) {
+      newErrors.email = "El correo es obligatorio";
+      isValid = false;
+    }
+    if (!formCompany.phone.trim()) {
+      newErrors.phone = "El teléfono es obligatorio";
+      isValid = false;
+    }
+    if (!formCompany.ruc.trim()) {
+      newErrors.ruc = "La ruc es obligatoria";
+      isValid = false;
+    }
+    if (!formCompany.razonSocial.trim()) {
+      newErrors.razonSocial = "El razonSocial de egreso es obligatorio";
+      isValid = false;
+    }
+    setErrorsCompany(newErrors);
     return isValid;
   };
 
@@ -206,22 +297,25 @@ export const AdminGraduates: React.FC = () => {
   };
 
   const handleAddCompany = async () => {
-    if (!validateForm()) return;
+    if (!validateCompanyForm()) return;
 
     const addGraduate: Company = {
       id: (graduates.length + 1).toString(),
-      name: formData.name,
-      email: formData.email,
-      phone: formData.phone,
-      career: formData.career,
+      name: formCompany.name,
+      ruc: formCompany.ruc,
+      razonSocial: formCompany.razonSocial,
+      rubro: formCompany.rubro,
+      email: formCompany.email,
+      phone: formCompany.phone,
+      site: formCompany.site,
+      address: formCompany.address,
       role: "company",
-      graduationYear: formData.graduationYear,
       status: "active",
     };
 
     const { id, ...newGraduate } = addGraduate;
 
-    const { error } = await supabase.from("egresados").insert(newGraduate);
+    const { error } = await supabase.from("empresas").insert(newGraduate);
 
     if (error) {
       console.error("Error al registrar egresado:", error.message);
@@ -233,14 +327,17 @@ export const AdminGraduates: React.FC = () => {
       return;
     }
 
-    setGraduates([...graduates, addGraduate]);
+    // setGraduates([...graduates, addGraduate]);
     setIsAddModalOpen(false);
-    setFormData({
+    setFormCompany({
       name: "",
+      ruc: "",
+      razonSocial: "",
+      rubro: "",
       email: "",
       phone: "",
-      career: "",
-      graduationYear: "",
+      site: "",
+      address: "",
     });
 
     addToast({
@@ -474,6 +571,69 @@ export const AdminGraduates: React.FC = () => {
           </CardBody>
         </Card>
       </motion.div>
+      {filteredCompanies.length > 0 ? (
+        <motion.div variants={itemVariants}>
+          <Card shadow="sm">
+            <CardHeader>
+              <h2 className="text-xl font-semibold">Empresas Registradas</h2>
+            </CardHeader>
+            <Divider />
+            <CardBody className="space-y-4">
+              {filteredCompanies.map((company) => (
+                <div
+                  key={company.id}
+                  className="p-4 bg-content2 rounded-lg flex flex-col md:flex-row justify-between gap-4"
+                >
+                  <div className="flex-grow">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <h3 className="text-lg font-medium">{company.name}</h3>
+                      <Chip
+                        color={getStatusColor(company.status)}
+                        variant="flat"
+                        size="sm"
+                      >
+                        {getStatusText(company.status)}
+                      </Chip>
+                    </div>
+                    <p className="text-default-600 mb-1">
+                      {company.razonSocial || ""} | RUC:{" "}
+                      {company.ruc || ""}
+                    </p>
+                    <p className="text-small text-default-500">
+                      {company.email || ""} | {company.phone || ""}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2 self-end md:self-center">
+                    <Button
+                      size="sm"
+                      color="primary"
+                      variant="flat"
+                      // onPress={() => editGraduate()}
+                    >
+                      Editar
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </CardBody>
+          </Card>
+        </motion.div>
+      ) : (
+        <motion.div variants={itemVariants} className="text-center py-12">
+          <Icon
+            icon="lucide:search-x"
+            className="mx-auto mb-4 text-default-400"
+            width={48}
+            height={48}
+          />
+          <h3 className="text-xl font-medium text-foreground-800">
+            No se encontraron egresados
+          </h3>
+          <p className="text-default-500 mt-2">
+            Intenta con otros términos de búsqueda
+          </p>
+        </motion.div>
+      )}
       {filteredGraduates.length > 0 ? (
         <motion.div variants={itemVariants}>
           <Card shadow="sm">
@@ -628,48 +788,87 @@ export const AdminGraduates: React.FC = () => {
                   <Input
                     label="Nombre Completo"
                     placeholder="Ingrese el nombre completo"
-                    value={formData.name}
-                    onValueChange={(value) => handleChange("name", value)}
-                    isInvalid={!!errors.name}
-                    errorMessage={errors.name}
+                    value={formCompany.name}
+                    onValueChange={(value) =>
+                      handleChangeCompany("name", value)
+                    }
+                    isInvalid={!!errorsCompany.name}
+                    errorMessage={errorsCompany.name}
+                    isRequired
+                  />
+                  <Input
+                    label="RUC"
+                    placeholder="Ingrese el RUC"
+                    value={formCompany.ruc}
+                    onValueChange={(value) => handleChangeCompany("ruc", value)}
+                    isInvalid={!!errorsCompany.ruc}
+                    errorMessage={errorsCompany.ruc}
+                    isRequired
+                  />
+                  <Input
+                    label="razón social"
+                    placeholder="Ingrese la razón social"
+                    value={formCompany.razonSocial}
+                    onValueChange={(value) =>
+                      handleChangeCompany("razonSocial", value)
+                    }
+                    isInvalid={!!errorsCompany.razonSocial}
+                    errorMessage={errorsCompany.razonSocial}
+                    isRequired
+                  />
+                  <Input
+                    label="rubro"
+                    placeholder="Ingrese el rubro"
+                    value={formCompany.rubro}
+                    onValueChange={(value) =>
+                      handleChangeCompany("rubro", value)
+                    }
+                    isInvalid={!!errorsCompany.rubro}
+                    errorMessage={errorsCompany.rubro}
                     isRequired
                   />
                   <Input
                     label="Correo Electrónico"
                     placeholder="Ingrese el correo electrónico"
-                    value={formData.email}
-                    onValueChange={(value) => handleChange("email", value)}
-                    isInvalid={!!errors.email}
-                    errorMessage={errors.email}
+                    value={formCompany.email}
+                    onValueChange={(value) =>
+                      handleChangeCompany("email", value)
+                    }
+                    isInvalid={!!errorsCompany.email}
+                    errorMessage={errorsCompany.email}
                     isRequired
                   />
                   <Input
                     label="Teléfono"
                     placeholder="Ingrese el teléfono"
-                    value={formData.phone}
-                    onValueChange={(value) => handleChange("phone", value)}
-                    isInvalid={!!errors.phone}
-                    errorMessage={errors.phone}
-                    isRequired
-                  />
-                  <Input
-                    label="Carrera"
-                    placeholder="Ingrese la carrera"
-                    value={formData.career}
-                    onValueChange={(value) => handleChange("career", value)}
-                    isInvalid={!!errors.career}
-                    errorMessage={errors.career}
-                    isRequired
-                  />
-                  <Input
-                    label="Año de Egreso"
-                    placeholder="Ingrese el año de egreso"
-                    value={formData.graduationYear}
+                    value={formCompany.phone}
                     onValueChange={(value) =>
-                      handleChange("graduationYear", value)
+                      handleChangeCompany("phone", value)
                     }
-                    isInvalid={!!errors.graduationYear}
-                    errorMessage={errors.graduationYear}
+                    isInvalid={!!errorsCompany.phone}
+                    errorMessage={errorsCompany.phone}
+                    isRequired
+                  />
+                  <Input
+                    label="sitio web"
+                    placeholder="Ingrese el sitio web"
+                    value={formCompany.site}
+                    onValueChange={(value) =>
+                      handleChangeCompany("site", value)
+                    }
+                    isInvalid={!!errorsCompany.site}
+                    errorMessage={errorsCompany.site}
+                    isRequired
+                  />
+                  <Input
+                    label="dirección"
+                    placeholder="Ingrese la dirección"
+                    value={formCompany.address}
+                    onValueChange={(value) =>
+                      handleChangeCompany("address", value)
+                    }
+                    isInvalid={!!errorsCompany.address}
+                    errorMessage={errorsCompany.address}
                     isRequired
                   />
                 </div>

@@ -172,7 +172,7 @@ export const GraduateDashboard: React.FC = () => {
             <CardBody>
               {upcomingMeetings.length > 0 ? (
                 <div className="space-y-4">
-                  {upcomingMeetings.map((meeting) => (
+                  {upcomingMeetings.slice(0, 3).map((meeting) => (
                     <div
                       key={meeting.id}
                       className="flex justify-between items-center"
@@ -242,7 +242,7 @@ export const GraduateDashboard: React.FC = () => {
             <CardBody>
               {enrolledWorkshops.length > 0 ? (
                 <div className="space-y-4">
-                  {enrolledWorkshops.map((workshop) => (
+                  {enrolledWorkshops.slice(0, 3).map((workshop) => (
                     <div
                       key={workshop.id}
                       className="flex justify-between items-center"
@@ -385,7 +385,7 @@ export const GraduateDashboard: React.FC = () => {
           <CardBody>
             {jobs.length > 0 ? (
               <div className="space-y-4">
-                {jobs.map((job) => (
+                {jobs.slice(0, 3).map((job) => (
                   <div
                     key={job.id}
                     className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2"

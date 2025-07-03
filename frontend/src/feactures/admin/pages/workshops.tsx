@@ -400,7 +400,7 @@ export const AdminWorkshops: React.FC = () => {
         title: formData.title,
         description: formData.description,
         date: `${formData.date}T${formData.time}`,
-        status: "upcoming",
+        status: "active",
         image: imageUrl,
         link: formData.link,
         participants: 0,

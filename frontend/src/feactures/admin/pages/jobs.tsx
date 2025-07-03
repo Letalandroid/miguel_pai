@@ -3,7 +3,6 @@ import {
   Card,
   CardBody,
   CardHeader,
-  CardFooter,
   Button,
   Input,
   Chip,
