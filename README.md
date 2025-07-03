@@ -1,6 +1,6 @@
 # Setup
 
-Para levantar el frontend ejecuta: \
+Para levantar el frontend ejecuta:
 
 primero --> `npm i` \
 segundo --> `npm run dev`
