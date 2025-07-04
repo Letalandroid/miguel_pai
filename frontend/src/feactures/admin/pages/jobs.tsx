@@ -3,7 +3,6 @@ import {
   Card,
   CardBody,
   CardHeader,
-  CardFooter,
   Button,
   Input,
   Chip,
@@ -186,6 +185,8 @@ const applicantsMock: Applicant[] = [
 
 export const AdminJobs: React.FC = () => {
   const [jobs, setJobs] = React.useState<Job[]>([]);
+  const [postulantes, setPostulantes] = React.useState([]);
+  const [egresados, setEgresados] = React.useState([]);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<
     "all" | "active" | "closed" | "draft"
@@ -201,21 +202,106 @@ export const AdminJobs: React.FC = () => {
     React.useState<Applicant[]>(applicantsMock);
 
   useEffect(() => {
+    const getPostulantes = async () => {
+      const { data, error } = await supabase
+        .from("postulaciones")
+        .select("*")
+        .order("id", { ascending: false });
+
+      if (error) throw error;
+
+      setPostulantes(data);
+    };
+
+    getPostulantes();
+  }, []);
+
+  // 💡 Este useEffect depende de "postulantes"
+  useEffect(() => {
+    if (!postulantes || postulantes.length === 0) return;
+
     const getConvocatorias = async () => {
       const { error, data } = await supabase
         .from("convocatorias")
         .select("*")
         .order("id", { ascending: false });
 
-      setJobs(data);
+      if (error) throw error;
+
+      const updatedJobs = data.map((job: any) => {
+        const applicantsCount = postulantes.filter(
+          (p: any) => p.convocatoriaId === job.id
+        ).length;
+
+        return {
+          ...job,
+          applicants: applicantsCount,
+        };
+      });
+
+      setJobs(updatedJobs);
+    };
+
+    getConvocatorias();
+  }, [postulantes]); // ⬅️ escucha cuando postulantes cambie
+
+  useEffect(() => {
+    const getEgresados = async () => {
+      const { error, data } = await supabase
+        .from("egresados")
+        .select("*")
+        .order("id", { ascending: false });
+
+      setEgresados(data);
 
       if (error) {
         throw error;
       }
     };
 
-    getConvocatorias();
+    getEgresados();
   }, []);
+
+  // 🔄 Úsalo dentro del componente AdminJobs
+
+  const getApplicantsByConvocatoria = (convocatoriaId: number) => {
+    return postulantes
+      .filter((p) => p.convocatoriaId === convocatoriaId)
+      .map((p) => {
+        const egresado = egresados.find((e) => e.id === p.egresadoId);
+        return {
+          id: egresado?.id,
+          name: egresado?.name,
+          email: egresado?.email,
+          phone: egresado?.celular,
+          applicationDate: p.fechaPostulacion ?? new Date(),
+          status: p.estado || "pending",
+          cv: p.cvUrl || "#", // asegúrate de que así se llama en tu tabla
+        };
+      });
+  };
+
+  const postulantesDeEstaConvocatoria = postulantes.filter(
+    (p: any) => p.convocatoriaId === selectedJob?.id
+  );
+
+  useEffect(() => {
+    const hoy = new Date().toISOString();
+
+    const actualizarEstados = async () => {
+      const expiradas = jobs.filter(
+        (job) => job.closingDate < hoy && job.status === "active"
+      );
+      for (const job of expiradas) {
+        await supabase
+          .from("convocatorias")
+          .update({ status: "closed" })
+          .eq("id", job.id);
+      }
+    };
+
+    actualizarEstados();
+  }, [jobs]);
 
   // Form state
   const [formData, setFormData] = React.useState({
@@ -556,6 +642,10 @@ export const AdminJobs: React.FC = () => {
   const viewApplicants = (job: Job) => {
     setSelectedJob(job);
     setIsApplicantsModalOpen(true);
+
+    const postulantesDeLaConvocatoria = getApplicantsByConvocatoria(
+      parseInt(job.id)
+    );
   };
 
   // Animation variants
@@ -1087,9 +1177,12 @@ export const AdminJobs: React.FC = () => {
                     </p>
                   </div>
 
-                  {applicants.length > 0 ? (
+                  {getApplicantsByConvocatoria(parseInt(selectedJob.id))
+                    .length > 0 ? (
                     <div className="space-y-4">
-                      {applicants.map((applicant) => (
+                      {getApplicantsByConvocatoria(
+                        parseInt(selectedJob.id)
+                      ).map((applicant) => (
                         <div
                           key={applicant.id}
                           className="p-4 bg-content2 rounded-lg flex flex-col sm:flex-row justify-between gap-3"
@@ -1133,6 +1226,9 @@ export const AdminJobs: React.FC = () => {
                               <SelectItem key="rejected">Rechazado</SelectItem>
                             </Select>
                             <Button
+                              onClick={() =>
+                                window.open(applicant.cv, "_blank")
+                              }
                               size="sm"
                               color="primary"
                               variant="flat"

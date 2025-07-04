@@ -282,7 +282,7 @@ export const AdminDashboard: React.FC = () => {
             <CardBody>
               {workshops.length > 0 ? (
                 <div className="space-y-4">
-                  {workshops.map((workshop) => (
+                  {workshops.slice(0, 3).map((workshop) => (
                     <div
                       key={workshop.id}
                       className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 p-3 bg-content2 rounded-lg"
@@ -372,7 +372,7 @@ export const AdminDashboard: React.FC = () => {
             <CardBody>
               {jobs.length > 0 ? (
                 <div className="space-y-4">
-                  {jobs.map((job) => (
+                  {jobs.slice(0, 3).map((job) => (
                     <div
                       key={job.id}
                       className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 p-3 bg-content2 rounded-lg"

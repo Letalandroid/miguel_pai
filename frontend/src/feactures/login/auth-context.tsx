@@ -14,6 +14,11 @@ export interface User {
   phone?: string;
   status?: string;
   email: string;
+  ruc?: string;
+  razonSocial?: string;
+  rubro?: string;
+  site?: string;
+  address?: string;
   role: UserRole;
 }
 
@@ -48,33 +53,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [user, setUser] = React.useState<User | null>(null);
   const [graduates, setGraduates] = React.useState<User[]>([]);
+  const [companies, setCompanies] = React.useState<User[]>([]);
   const [isGraduatesLoaded, setIsGraduatesLoaded] = React.useState(false);
+  const [isCompaniesLoaded, setIsCompaniesLoaded] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
   const history = useHistory();
 
   useEffect(() => {
-    const getGraduados = async () => {
-      const { error, data } = await supabase
-        .from("egresados")
-        .select("*")
-        .order("id", { ascending: false });
+    const fetchUsers = async () => {
+      try {
+        const [egresadosRes, empresasRes] = await Promise.all([
+          supabase
+            .from("egresados")
+            .select("*")
+            .order("id", { ascending: false }),
+          supabase
+            .from("empresas")
+            .select("*")
+            .order("id", { ascending: false }),
+        ]);
 
-      if (data) setGraduates(data);
-      if (error) console.error(error);
+        if (egresadosRes.data) setGraduates(egresadosRes.data);
+        if (empresasRes.data) setCompanies(empresasRes.data);
 
-      setIsGraduatesLoaded(true); // ✅ Marcar como cargado
+        if (egresadosRes.error)
+          console.error("Error egresados", egresadosRes.error);
+        if (empresasRes.error)
+          console.error("Error empresas", empresasRes.error);
+      } catch (err) {
+        console.error("Error al cargar usuarios:", err);
+      } finally {
+        setIsGraduatesLoaded(true);
+        setIsCompaniesLoaded(true);
+      }
     };
 
-    getGraduados();
+    fetchUsers();
   }, []);
-
-  // Check if user is already logged in
-  // React.useEffect(() => {
-  //   const storedUser = localStorage.getItem("user");
-  //   if (storedUser) {
-  //     setUser(JSON.parse(storedUser));
-  //   }
-  // }, []);
 
   // Login function
   const login = async (email: string, password: string) => {
@@ -93,6 +108,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         });
       }
 
+      if (!isCompaniesLoaded) {
+        await new Promise((resolve) => {
+          const check = setInterval(() => {
+            if (isCompaniesLoaded) {
+              clearInterval(check);
+              resolve(true);
+            }
+          }, 100);
+        });
+      }
+
       await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulación
 
       const foundUser = mockUsers.find(
@@ -103,11 +129,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         (u) => u.email.toLowerCase() === email.toLowerCase()
       );
 
-      if ((foundUser || graduateUser) && password === "password") {
-        const user = foundUser || { ...graduateUser };
-        console.log(user);
-        
+      const companyUser = companies.find(
+        (u) => u.email.toLowerCase() === email.toLowerCase()
+      );
 
+      const user = foundUser ?? graduateUser ?? companyUser;
+
+      if (user && password === "password") {
         setUser(user);
         localStorage.setItem("user", JSON.stringify(user));
 
