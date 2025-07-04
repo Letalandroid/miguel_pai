@@ -202,33 +202,25 @@ export const AdminJobs: React.FC = () => {
     React.useState<Applicant[]>(applicantsMock);
 
   useEffect(() => {
-    const getPostulantes = async () => {
-      const { data, error } = await supabase
-        .from("postulaciones")
-        .select("*")
-        .order("id", { ascending: false });
+    const fetchData = async () => {
+      const [convocatoriasRes, postulantesRes] = await Promise.all([
+        supabase
+          .from("convocatorias")
+          .select("*")
+          .order("id", { ascending: false }),
+        supabase
+          .from("postulaciones")
+          .select("*")
+          .order("id", { ascending: false }),
+      ]);
 
-      if (error) throw error;
+      if (convocatoriasRes.error) throw convocatoriasRes.error;
+      if (postulantesRes.error) throw postulantesRes.error;
 
-      setPostulantes(data);
-    };
+      const postulantes = postulantesRes.data;
+      setPostulantes(postulantes);
 
-    getPostulantes();
-  }, []);
-
-  // 💡 Este useEffect depende de "postulantes"
-  useEffect(() => {
-    if (!postulantes || postulantes.length === 0) return;
-
-    const getConvocatorias = async () => {
-      const { error, data } = await supabase
-        .from("convocatorias")
-        .select("*")
-        .order("id", { ascending: false });
-
-      if (error) throw error;
-
-      const updatedJobs = data.map((job: any) => {
+      const updatedJobs = convocatoriasRes.data.map((job: any) => {
         const applicantsCount = postulantes.filter(
           (p: any) => p.convocatoriaId === job.id
         ).length;
@@ -242,8 +234,8 @@ export const AdminJobs: React.FC = () => {
       setJobs(updatedJobs);
     };
 
-    getConvocatorias();
-  }, [postulantes]); // ⬅️ escucha cuando postulantes cambie
+    fetchData();
+  }, []);
 
   useEffect(() => {
     const getEgresados = async () => {
