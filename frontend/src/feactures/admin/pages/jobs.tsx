@@ -267,7 +267,7 @@ export const AdminJobs: React.FC = () => {
           email: egresado?.email,
           phone: egresado?.celular,
           applicationDate: p.fechaPostulacion ?? new Date(),
-          status: p.estado || "pending",
+          status: p.estado,
           cv: p.cvUrl || "#", // asegúrate de que así se llama en tu tabla
         };
       });
@@ -1206,6 +1206,12 @@ export const AdminJobs: React.FC = () => {
                               className="w-32"
                               selectedKeys={[applicant.status]}
                               aria-label="Cambiar estado"
+                              onSelectionChange={(keys) => {
+                                const value = Array.from(keys)[0];
+                                console.log("Nuevo estado:", value);
+                                // Aquí podrías hacer algo como:
+                                // updatePostulacionStatus(applicant.id, value);
+                              }}
                             >
                               <SelectItem key="pending">Pendiente</SelectItem>
                               <SelectItem key="reviewed">Revisado</SelectItem>
@@ -1217,6 +1223,7 @@ export const AdminJobs: React.FC = () => {
                               </SelectItem>
                               <SelectItem key="rejected">Rechazado</SelectItem>
                             </Select>
+
                             <Button
                               onClick={() =>
                                 window.open(applicant.cv, "_blank")

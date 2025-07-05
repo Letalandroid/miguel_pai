@@ -143,7 +143,9 @@ export const CompanyJobs: React.FC = () => {
           email: egresado?.email,
           phone: egresado?.celular,
           applicationDate: p.fechaPostulacion ?? new Date(),
-          status: p.estado || "pending",
+          convocatoriaId,
+          egresadoId: p?.egresadoId,
+          status: p.status,
           cv: p.cvUrl || "#", // asegúrate de que así se llama en tu tabla
         };
       });
@@ -236,6 +238,44 @@ export const CompanyJobs: React.FC = () => {
       default:
         return "Desconocido";
     }
+  };
+
+  const updatePostulanteStatus = async (
+    convocatoriaId: number,
+    egresadoId: number,
+    newStatus: string
+  ) => {
+    // 1. Actualizar en Supabase
+    const { error } = await supabase
+      .from("postulaciones")
+      .update({ status: newStatus })
+      .eq("convocatoriaId", convocatoriaId)
+      .eq("egresadoId", egresadoId);
+
+    if (error) {
+      console.error("Error al actualizar estado:", error.message);
+      addToast({
+        title: "Error",
+        description: "No se pudo actualizar el estado del postulante",
+        color: "danger",
+      });
+      return;
+    }
+
+    // 2. Actualizar en el estado local
+    setPostulantes((prev) =>
+      prev.map((p) =>
+        p.convocatoriaId === convocatoriaId && p.egresadoId === egresadoId
+          ? { ...p, status: newStatus }
+          : p
+      )
+    );
+
+    addToast({
+      title: "Estado actualizado",
+      description: "El estado del postulante ha sido actualizado",
+      color: "success",
+    });
   };
 
   // Handle form submission for adding a new job
@@ -1140,6 +1180,14 @@ export const CompanyJobs: React.FC = () => {
                               className="w-32"
                               selectedKeys={[applicant.status]}
                               aria-label="Cambiar estado"
+                              onSelectionChange={(keys) => {
+                                const newStatus = String(Array.from(keys)[0]);
+                                updatePostulanteStatus(
+                                  applicant.convocatoriaId,
+                                  applicant.egresadoId,
+                                  newStatus
+                                );
+                              }}
                             >
                               <SelectItem key="pending">Pendiente</SelectItem>
                               <SelectItem key="reviewed">Revisado</SelectItem>
