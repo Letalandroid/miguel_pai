@@ -234,6 +234,7 @@ export const GraduateJobs: React.FC = () => {
         egresadoId: user.id,
         cvUrl,
         cartaPresentacion: coverLetter,
+        status: 'pending'
       };
 
       const { error } = await supabase.from("postulaciones").insert(dataJob);
