@@ -20,6 +20,7 @@ import { Icon } from "@iconify/react";
 import { motion } from "framer-motion";
 import { addToast } from "@heroui/react";
 import { supabase } from "../../../supabase/client";
+import { useAuth } from "../../login/auth-context";
 
 // Job type definition
 interface Job {
@@ -60,6 +61,7 @@ export const CompanyJobs: React.FC = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
   const [isApplicantsModalOpen, setIsApplicantsModalOpen] =
     React.useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -80,16 +82,22 @@ export const CompanyJobs: React.FC = () => {
       const postulantes = postulantesRes.data;
       setPostulantes(postulantes);
 
-      const updatedJobs = convocatoriasRes.data.map((job: any) => {
-        const applicantsCount = postulantes.filter(
-          (p: any) => p.convocatoriaId === job.id
-        ).length;
+      const updatedJobs = convocatoriasRes.data.reduce(
+        (acc: any[], job: any) => {
+          if (job.companyId == user.id) {
+            const applicantsCount = postulantes.filter(
+              (p: any) => p.convocatoriaId === job.id
+            ).length;
 
-        return {
-          ...job,
-          applicants: applicantsCount,
-        };
-      });
+            acc.push({
+              ...job,
+              applicants: applicantsCount,
+            });
+          }
+          return acc;
+        },
+        []
+      );
 
       setJobs(updatedJobs);
     };
@@ -279,7 +287,7 @@ export const CompanyJobs: React.FC = () => {
   };
 
   // Handle form submission for adding a new job
-  const handleAddJob = () => {
+  const handleAddJob = async () => {
     if (validateForm()) {
       // Parse requirements
       const requirementsList = formData.requirements
@@ -288,10 +296,10 @@ export const CompanyJobs: React.FC = () => {
         .map((req) => req.trim());
 
       // Create new job
-      const newJob: Job = {
+      const addJob: Job = {
         id: (jobs.length + 1).toString(),
         title: formData.title,
-        company: formData.company,
+        company: formData.company || user.name,
         description: formData.description,
         requirements: requirementsList,
         createdAt: new Date().toISOString(),
@@ -300,7 +308,27 @@ export const CompanyJobs: React.FC = () => {
         applicants: 0,
       };
 
-      setJobs([...jobs, newJob]);
+      const { id, ...newJob } = addJob;
+
+      const { error } = await supabase.from("convocatorias").insert([
+        {
+          ...newJob,
+          companyId: user.id,
+        },
+      ]);
+
+      if (error) {
+        console.error(error);
+        setErrors({
+          title: error.message,
+          description: "",
+          requirements: "",
+          closingDate: "",
+        });
+        return;
+      }
+
+      setJobs([...jobs, addJob]);
       setIsAddModalOpen(false);
 
       // Reset form
@@ -661,7 +689,7 @@ export const CompanyJobs: React.FC = () => {
           <Button
             color="primary"
             startContent={<Icon icon="lucide:plus" width={18} height={18} />}
-            // onPress={() => setIsCreateModalOpen(true)}
+            onPress={() => setIsAddModalOpen(true)}
           >
             Nueva Convocatoria
           </Button>
@@ -932,11 +960,11 @@ export const CompanyJobs: React.FC = () => {
                   <Input
                     label="Empresa"
                     placeholder="Ingrese el nombre de la empresa"
-                    value={formData.company}
+                    value={user.name}
                     onValueChange={(value) => handleChange("company", value)}
                     // isInvalid={!!errors.company}
                     // errorMessage={errors.company}
-                    isRequired
+                    isDisabled
                   />
 
                   <Textarea
