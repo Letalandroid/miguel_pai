@@ -151,6 +151,8 @@ const participantsMock: Participant[] = [
 
 export const AdminWorkshops: React.FC = () => {
   const [workshops, setWorkshops] = React.useState<Workshop[]>([]);
+  const [egresados, setEgresados] = React.useState([]);
+  const [taller_egresado, setTalleresEgresedaso] = React.useState([]);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<
     "all" | "upcoming" | "active" | "completed"
@@ -164,7 +166,7 @@ export const AdminWorkshops: React.FC = () => {
   const [isParticipantsModalOpen, setIsParticipantsModalOpen] =
     React.useState(false);
   const [participants, setParticipants] =
-    React.useState<Participant[]>(participantsMock);
+    React.useState<Participant[]>([]);
 
   useEffect(() => {
     const getTalleres = async () => {
@@ -174,13 +176,52 @@ export const AdminWorkshops: React.FC = () => {
         .order("id", { ascending: false });
 
       setWorkshops(data);
+      console.log(data);
 
+      console.log();
       if (error) {
         throw error;
       }
     };
 
     getTalleres();
+  }, []);
+
+  useEffect(() => {
+    const getEgresados = async () => {
+      const { error, data } = await supabase
+        .from("egresados")
+        .select("*")
+        .order("id", { ascending: false });
+
+      setEgresados(data);
+      console.log(data);
+
+      console.log();
+      if (error) {
+        throw error;
+      }
+    };
+
+    getEgresados();
+  }, []);
+
+  useEffect(() => {
+    const getTalleresEgresados = async () => {
+      const { error, data } = await supabase
+        .from("taller_egresado")
+        .select("*")
+        .order("id", { ascending: false });
+
+      setTalleresEgresedaso(data);
+      console.log(data);
+
+      if (error) {
+        throw error;
+      }
+    };
+
+    getTalleresEgresados();
   }, []);
 
   // Form state
@@ -209,6 +250,14 @@ export const AdminWorkshops: React.FC = () => {
 
   // Filter workshops based on search term and status
   const filteredWorkshops = workshops.filter((workshop) => {
+    // Contar participantes reales basándose en taller_egresado
+    const participantCount = taller_egresado.filter(
+      (egresado) => egresado.tallerId === workshop.id
+    ).length;
+
+    // Agregar la propiedad participants al workshop
+    workshop.participants = participantCount;
+
     const matchesSearch =
       workshop.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       workshop.description.toLowerCase().includes(searchTerm.toLowerCase());
@@ -444,7 +493,7 @@ export const AdminWorkshops: React.FC = () => {
         description: formData.description,
         date: `${formData.date}T${formData.time}`,
         link: formData.link,
-        status: formData.status as Workshop['status'],
+        status: formData.status as Workshop["status"],
         maxParticipants: parseInt(formData.maxParticipants),
         image: formData.image
           ? URL.createObjectURL(formData.image) // ⚠ solo para vista previa
