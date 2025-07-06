@@ -18,6 +18,7 @@ import { Icon } from "@iconify/react";
 import { motion } from "framer-motion";
 import { addToast } from "@heroui/react";
 import { supabase } from "../../../supabase/client";
+import { useAuth } from "../../login/auth-context";
 
 // Workshop type definition
 interface Workshop {
@@ -31,66 +32,9 @@ interface Workshop {
   enrolled: boolean;
 }
 
-// Mock data
-const workshopsMock: Workshop[] = [
-  {
-    id: "1",
-    title: "Habilidades Blandas para el Éxito Profesional",
-    description:
-      "Aprende a desarrollar habilidades de comunicación, trabajo en equipo y liderazgo que son fundamentales en el entorno laboral actual.",
-    date: "2023-06-20T14:00:00",
-    status: "active",
-    image: "https://img.heroui.chat/image/ai?w=600&h=400&u=workshop1",
-    link: "https://meet.google.com/abc-defg-hij",
-    enrolled: true,
-  },
-  {
-    id: "2",
-    title: "Innovación y Emprendimiento",
-    description:
-      "Descubre las claves para desarrollar proyectos innovadores y emprender con éxito en el mercado actual.",
-    date: "2023-06-25T09:00:00",
-    status: "active",
-    image: "https://img.heroui.chat/image/ai?w=600&h=400&u=workshop2",
-    link: "https://meet.google.com/klm-nopq-rst",
-    enrolled: true,
-  },
-  {
-    id: "3",
-    title: "Herramientas Digitales para Profesionales",
-    description:
-      "Conoce y aprende a utilizar las principales herramientas digitales que potenciarán tu perfil profesional.",
-    date: "2023-07-05T16:30:00",
-    status: "active",
-    image: "https://img.heroui.chat/image/ai?w=600&h=400&u=workshop3",
-    link: "https://meet.google.com/uvw-xyz-123",
-    enrolled: false,
-  },
-  {
-    id: "4",
-    title: "LinkedIn: Optimiza tu Perfil Profesional",
-    description:
-      "Aprende a crear un perfil de LinkedIn atractivo y efectivo para destacar en el mercado laboral.",
-    date: "2023-07-10T10:00:00",
-    status: "active",
-    image: "https://img.heroui.chat/image/ai?w=600&h=400&u=workshop4",
-    link: "https://meet.google.com/456-789-012",
-    enrolled: false,
-  },
-  {
-    id: "5",
-    title: "Gestión del Tiempo y Productividad",
-    description:
-      "Estrategias y técnicas para optimizar tu tiempo y aumentar tu productividad en el entorno laboral.",
-    date: "2023-06-15T11:00:00",
-    status: "closed",
-    image: "https://img.heroui.chat/image/ai?w=600&h=400&u=workshop5",
-    enrolled: false,
-  },
-];
-
 export const GraduateWorkshops: React.FC = () => {
   const [workshops, setWorkshops] = React.useState<Workshop[]>([]);
+  const [taller_egresado, setTalleresEgresedaso] = React.useState([]);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<
     "all" | "active" | "closed" | "enrolled"
@@ -99,6 +43,7 @@ export const GraduateWorkshops: React.FC = () => {
     React.useState<Workshop | null>(null);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = React.useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     const getTalleres = async () => {
@@ -117,8 +62,34 @@ export const GraduateWorkshops: React.FC = () => {
     getTalleres();
   }, []);
 
+  useEffect(() => {
+    const getTalleresEgresados = async () => {
+      const { error, data } = await supabase
+        .from("taller_egresado")
+        .select("*")
+        .order("id", { ascending: false });
+
+      setTalleresEgresedaso(data);
+
+      if (error) {
+        throw error;
+      }
+    };
+
+    getTalleresEgresados();
+  }, []);
+
   // Filter workshops based on search term and status
   const filteredWorkshops = workshops.filter((workshop) => {
+    // Verificar si el usuario ya está inscrito en este workshop
+    const isEnrolled = taller_egresado.some(
+      (egresado) =>
+        egresado.tallerId === workshop.id && egresado.egresadoId == user.id
+    );
+
+    // Agregar la propiedad enrolled al workshop para uso posterior
+    workshop.enrolled = isEnrolled;
+
     const matchesSearch =
       workshop.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       workshop.description.toLowerCase().includes(searchTerm.toLowerCase());
@@ -152,22 +123,45 @@ export const GraduateWorkshops: React.FC = () => {
   };
 
   // Confirm enrollment
-  const confirmEnrollment = () => {
+  const confirmEnrollment = async () => {
     if (selectedWorkshop) {
-      // Update workshop status
-      const updatedWorkshops = workshops.map((w) =>
-        w.id === selectedWorkshop.id ? { ...w, enrolled: true } : w
-      );
+      try {
+        // Insertar en la base de datos
+        const { error, data } = await supabase
+          .from("taller_egresado")
+          .insert({
+            tallerId: selectedWorkshop.id,
+            egresadoId: user.id,
+          })
+          .select(); // Agregar select() para obtener el registro insertado
 
-      setWorkshops(updatedWorkshops);
-      setIsConfirmModalOpen(false);
+        if (error) {
+          console.error(error);
+          return;
+        }
 
-      // Show success message
-      addToast({
-        title: "Inscripción exitosa",
-        description: `Te has inscrito en el taller: ${selectedWorkshop.title}`,
-        color: "success",
-      });
+        // Actualizar el estado local de taller_egresado
+        if (data && data.length > 0) {
+          setTalleresEgresedaso((prevTalleres) => [...prevTalleres, data[0]]);
+        }
+
+        // Cerrar modal
+        setIsConfirmModalOpen(false);
+
+        // Mostrar mensaje de éxito
+        addToast({
+          title: "Inscripción exitosa",
+          description: `Te has inscrito en el taller: ${selectedWorkshop.title}`,
+          color: "success",
+        });
+      } catch (error) {
+        console.error("Error al inscribirse:", error);
+        addToast({
+          title: "Error",
+          description: "Hubo un problema al inscribirse. Intenta nuevamente.",
+          color: "danger",
+        });
+      }
     }
   };
 
@@ -296,7 +290,9 @@ export const GraduateWorkshops: React.FC = () => {
                   <div className="flex justify-between items-start">
                     <h3 className="text-lg font-semibold">{workshop.title}</h3>
                     <Chip
-                      color={workshop.status === "active" ? "success" : "danger"}
+                      color={
+                        workshop.status === "active" ? "success" : "danger"
+                      }
                       variant="flat"
                       size="sm"
                     >
