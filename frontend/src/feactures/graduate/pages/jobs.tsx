@@ -234,7 +234,7 @@ export const GraduateJobs: React.FC = () => {
         egresadoId: user.id,
         cvUrl,
         cartaPresentacion: coverLetter,
-        status: 'pending'
+        status: "pending",
       };
 
       const { error } = await supabase.from("postulaciones").insert(dataJob);
@@ -361,103 +361,112 @@ export const GraduateJobs: React.FC = () => {
       {/* Jobs list */}
       {filteredJobs.length > 0 ? (
         <div className="space-y-6">
-          {filteredJobs.map((job, index) => (
-            <motion.div key={job.id} variants={itemVariants} custom={index}>
-              <Card shadow="sm">
-                <CardBody className="p-6">
-                  <div className="flex flex-col md:flex-row justify-between gap-4">
-                    <div className="flex-grow">
-                      <div className="flex items-start gap-2 mb-2">
-                        <div>
-                          <h3 className="text-xl font-semibold">{job.title}</h3>
-                          <p className="text-default-600 font-medium">
-                            {job.company}
-                          </p>
-                        </div>
-                        <div className="flex gap-2 ml-auto md:ml-0">
-                          <Chip
-                            color={
-                              job.status === "active" ? "success" : "default"
-                            }
-                            variant="flat"
-                            size="sm"
-                          >
-                            {job.status === "active" ? "Activa" : "Cerrada"}
-                          </Chip>
-
-                          {job.applied && (
-                            <Chip color="secondary" variant="dot" size="sm">
-                              Postulada
+          {filteredJobs
+            .filter((job) => job.status === "active" || job.status === "closed")
+            .map((job, index) => (
+              <motion.div key={job.id} variants={itemVariants} custom={index}>
+                <Card shadow="sm">
+                  <CardBody className="p-6">
+                    <div className="flex flex-col md:flex-row justify-between gap-4">
+                      <div className="flex-grow">
+                        <div className="flex items-start gap-2 mb-2">
+                          <div>
+                            <h3 className="text-xl font-semibold">
+                              {job.title}
+                            </h3>
+                            <p className="text-default-600 font-medium">
+                              {job.company}
+                            </p>
+                          </div>
+                          <div className="flex gap-2 ml-auto md:ml-0">
+                            <Chip
+                              color={
+                                job.status === "active" ? "success" : "default"
+                              }
+                              variant="flat"
+                              size="sm"
+                            >
+                              {job.status === "active" ? "Activa" : "Cerrada"}
                             </Chip>
-                          )}
+
+                            {job.applied && (
+                              <Chip color="secondary" variant="dot" size="sm">
+                                Postulada
+                              </Chip>
+                            )}
+                          </div>
+                        </div>
+
+                        <p className="text-small text-default-500 mb-4">
+                          <span className="font-medium">Fecha de cierre:</span>{" "}
+                          {new Date(job.closingDate).toLocaleDateString()}
+                        </p>
+
+                        <p className="text-default-700 line-clamp-2 mb-4">
+                          {job.description}
+                        </p>
+
+                        <div className="hidden md:block">
+                          <p className="text-small font-medium mb-2">
+                            Requisitos principales:
+                          </p>
+                          <ul className="text-small text-default-600 list-disc pl-5 space-y-1">
+                            {job.requirements.slice(0, 2).map((req, i) => (
+                              <li key={i}>{req}</li>
+                            ))}
+                            {job.requirements.length > 2 && (
+                              <li>
+                                Y {job.requirements.length - 2} requisitos
+                                más...
+                              </li>
+                            )}
+                          </ul>
                         </div>
                       </div>
 
-                      <p className="text-small text-default-500 mb-4">
-                        <span className="font-medium">Fecha de cierre:</span>{" "}
-                        {new Date(job.closingDate).toLocaleDateString()}
-                      </p>
-
-                      <p className="text-default-700 line-clamp-2 mb-4">
-                        {job.description}
-                      </p>
-
-                      <div className="hidden md:block">
-                        <p className="text-small font-medium mb-2">
-                          Requisitos principales:
-                        </p>
-                        <ul className="text-small text-default-600 list-disc pl-5 space-y-1">
-                          {job.requirements.slice(0, 2).map((req, i) => (
-                            <li key={i}>{req}</li>
-                          ))}
-                          {job.requirements.length > 2 && (
-                            <li>
-                              Y {job.requirements.length - 2} requisitos más...
-                            </li>
-                          )}
-                        </ul>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-2 md:min-w-[180px] justify-center">
-                      <Button
-                        color="primary"
-                        variant="flat"
-                        fullWidth
-                        onPress={() => viewDetails(job)}
-                      >
-                        Ver Detalles
-                      </Button>
-
-                      {job.status === "active" && !job.applied && (
+                      <div className="flex flex-col gap-2 md:min-w-[180px] justify-center">
                         <Button
-                          color="success"
-                          fullWidth
-                          onPress={() => handleApply(job)}
-                        >
-                          Postular
-                        </Button>
-                      )}
-
-                      {job.applied && (
-                        <Button
-                          color="secondary"
+                          color="primary"
                           variant="flat"
                           fullWidth
-                          isDisabled
-                          startContent={
-                            <Icon icon="lucide:check" width={16} height={16} />
-                          }
+                          onPress={() => viewDetails(job)}
                         >
-                          Postulación Enviada
+                          Ver Detalles
                         </Button>
-                      )}
+
+                        {job.status === "active" && !job.applied && (
+                          <Button
+                            color="success"
+                            fullWidth
+                            onPress={() => handleApply(job)}
+                          >
+                            Postular
+                          </Button>
+                        )}
+
+                        {job.applied && (
+                          <Button
+                            color="secondary"
+                            variant="flat"
+                            fullWidth
+                            isDisabled
+                            startContent={
+                              <Icon
+                                icon="lucide:check"
+                                width={16}
+                                height={16}
+                              />
+                            }
+                          >
+                            Postulación Enviada
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </CardBody>
-              </Card>
-            </motion.div>
-          ))}
+                  </CardBody>
+                </Card>
+              </motion.div>
+            ))}
         </div>
       ) : (
         <motion.div variants={itemVariants} className="text-center py-12">
