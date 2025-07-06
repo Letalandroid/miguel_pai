@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Card,
   CardBody,
@@ -118,17 +118,20 @@ const jobsMock: Job[] = [
 ];
 
 export const GraduateJobs: React.FC = () => {
-  const [jobs, setJobs] = React.useState<Job[]>([]);
-  const [searchTerm, setSearchTerm] = React.useState("");
-  const [statusFilter, setStatusFilter] = React.useState<
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [postulantes, setPostulantes] = useState([]);
+  const [isSendApply, setIsSendApply] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<
     "all" | "active" | "closed" | "applied"
   >("all");
-  const [selectedJob, setSelectedJob] = React.useState<Job | null>(null);
-  const [isDetailsModalOpen, setIsDetailsModalOpen] = React.useState(false);
-  const [isApplyModalOpen, setIsApplyModalOpen] = React.useState(false);
-  const [resumeFile, setResumeFile] = React.useState<File | null>(null);
-  const [coverLetter, setCoverLetter] = React.useState("");
-  const [fileError, setFileError] = React.useState("");
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [coverLetter, setCoverLetter] = useState("");
+  const [fileError, setFileError] = useState("");
+  const [filteredJobs, setFilteredJobs] = useState([]);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -148,22 +151,51 @@ export const GraduateJobs: React.FC = () => {
     getConvocatorias();
   }, []);
 
-  // Filter jobs based on search term and status
-  const filteredJobs = jobs.filter((job) => {
-    const matchesSearch =
-      job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.description.toLowerCase().includes(searchTerm.toLowerCase());
+  useEffect(() => {
+    const getPostulaciones = async () => {
+      const { error, data } = await supabase
+        .from("postulaciones")
+        .select("*")
+        .order("id", { ascending: false });
 
-    if (statusFilter === "all") return matchesSearch;
-    if (statusFilter === "active")
-      return matchesSearch && job.status === "active";
-    if (statusFilter === "closed")
-      return matchesSearch && job.status === "closed";
-    if (statusFilter === "applied") return matchesSearch && job.applied;
+      setPostulantes(data);
 
-    return matchesSearch;
-  });
+      if (error) {
+        throw error;
+      }
+    };
+
+    getPostulaciones();
+  }, [jobs]);
+
+  // Filter jobs - SIN async y SIN llamar a getPostulaciones()
+  useEffect(() => {
+    const filtered = jobs.filter((job) => {
+      const isApplied = postulantes.some(
+        (egresado) =>
+          egresado.convocatoriaId === job.id && egresado.egresadoId == user.id
+      );
+
+      // Agregar la propiedad applied al job para uso posterior
+      job.applied = isApplied;
+
+      const matchesSearch =
+        job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        job.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        job.description.toLowerCase().includes(searchTerm.toLowerCase());
+
+      if (statusFilter === "all") return matchesSearch;
+      if (statusFilter === "active")
+        return matchesSearch && job.status === "active";
+      if (statusFilter === "closed")
+        return matchesSearch && job.status === "closed";
+      if (statusFilter === "applied") return matchesSearch && job.applied;
+
+      return matchesSearch;
+    });
+
+    setFilteredJobs(filtered);
+  }, [postulantes]);
 
   // Handle file upload
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -203,6 +235,7 @@ export const GraduateJobs: React.FC = () => {
   // Submit application
   const submitApplication = async () => {
     let cvUrl = "No definido";
+    setIsSendApply(true);
 
     if (!resumeFile) {
       setFileError("Por favor, adjunta tu CV");
@@ -220,14 +253,18 @@ export const GraduateJobs: React.FC = () => {
         cvUrl = uploadResult.publicUrl;
       } catch (error) {
         console.error("Error uploading file:", error);
+        setFileError('Error uploading CV');
+        setIsSendApply(false);
+        setIsApplyModalOpen(false);
+        return;
       }
     }
 
     if (selectedJob) {
       // Update job status
-      const updatedJobs = jobs.map((j) =>
-        j.id === selectedJob.id ? { ...j, applied: true } : j
-      );
+      const updatedJobs = jobs.map((j) => {
+        return j.id == selectedJob.id ? { ...j, applied: true } : j;
+      });
 
       const dataJob = {
         convocatoriaId: selectedJob.id,
@@ -237,7 +274,10 @@ export const GraduateJobs: React.FC = () => {
         status: "pending",
       };
 
-      const { error } = await supabase.from("postulaciones").insert(dataJob);
+      const { error, data } = await supabase
+        .from("postulaciones")
+        .insert(dataJob)
+        .select();
 
       if (error) {
         setFileError("No se pudo postular, intente más tarde");
@@ -246,6 +286,7 @@ export const GraduateJobs: React.FC = () => {
       }
 
       setJobs(updatedJobs);
+      setIsSendApply(false);
       setIsApplyModalOpen(false);
 
       // Show success message
@@ -684,7 +725,12 @@ export const GraduateJobs: React.FC = () => {
                   <Button color="default" variant="light" onPress={onClose}>
                     Cancelar
                   </Button>
-                  <Button color="success" onPress={submitApplication}>
+                  <Button
+                    color="success"
+                    disabled={isSendApply}
+                    isLoading={isSendApply}
+                    onPress={submitApplication}
+                  >
                     Enviar Postulación
                   </Button>
                 </ModalFooter>
