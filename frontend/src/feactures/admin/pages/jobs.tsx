@@ -1208,7 +1208,7 @@ export const AdminJobs: React.FC = () => {
                               aria-label="Cambiar estado"
                               onSelectionChange={(keys) => {
                                 const value = Array.from(keys)[0];
-                                console.log("Nuevo estado:", value);
+                                // console.log("Nuevo estado:", value);
                                 // Aquí podrías hacer algo como:
                                 // updatePostulacionStatus(applicant.id, value);
                               }}

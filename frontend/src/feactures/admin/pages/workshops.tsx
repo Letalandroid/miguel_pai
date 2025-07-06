@@ -40,117 +40,17 @@ interface Workshop {
 // Participant type definition
 interface Participant {
   id: string;
+  tallerId: number;
   name: string;
   email: string;
   registrationDate: string;
   status: "confirmed" | "pending" | "cancelled";
 }
 
-// Mock data
-const workshopsMock: Workshop[] = [
-  {
-    id: "1",
-    title: "Habilidades Blandas para el Éxito Profesional",
-    description:
-      "Aprende a desarrollar habilidades de comunicación, trabajo en equipo y liderazgo que son fundamentales en el entorno laboral actual.",
-    date: "2023-06-20T14:00:00",
-    status: "upcoming",
-    image: "https://img.heroui.chat/image/ai?w=600&h=400&u=workshop1",
-    link: "https://meet.google.com/abc-defg-hij",
-    participants: 18,
-    maxParticipants: 30,
-  },
-  {
-    id: "2",
-    title: "Innovación y Emprendimiento",
-    description:
-      "Descubre las claves para desarrollar proyectos innovadores y emprender con éxito en el mercado actual.",
-    date: "2023-06-25T09:00:00",
-    status: "upcoming",
-    image: "https://img.heroui.chat/image/ai?w=600&h=400&u=workshop2",
-    link: "https://meet.google.com/klm-nopq-rst",
-    participants: 12,
-    maxParticipants: 25,
-  },
-  {
-    id: "3",
-    title: "LinkedIn: Optimiza tu Perfil Profesional",
-    description:
-      "Aprende a crear un perfil de LinkedIn atractivo y efectivo para destacar en el mercado laboral.",
-    date: "2023-06-10T10:00:00",
-    status: "completed",
-    image: "https://img.heroui.chat/image/ai?w=600&h=400&u=workshop4",
-    link: "https://meet.google.com/456-789-012",
-    participants: 25,
-    maxParticipants: 25,
-  },
-  {
-    id: "4",
-    title: "Herramientas Digitales para Profesionales",
-    description:
-      "Conoce y aprende a utilizar las principales herramientas digitales que potenciarán tu perfil profesional.",
-    date: "2023-07-05T16:30:00",
-    status: "upcoming",
-    image: "https://img.heroui.chat/image/ai?w=600&h=400&u=workshop3",
-    link: "https://meet.google.com/uvw-xyz-123",
-    participants: 8,
-    maxParticipants: 20,
-  },
-  {
-    id: "5",
-    title: "Gestión del Tiempo y Productividad",
-    description:
-      "Estrategias y técnicas para optimizar tu tiempo y aumentar tu productividad en el entorno laboral.",
-    date: "2023-06-15T11:00:00",
-    status: "active",
-    image: "https://img.heroui.chat/image/ai?w=600&h=400&u=workshop5",
-    link: "https://meet.google.com/def-456-abc",
-    participants: 15,
-    maxParticipants: 20,
-  },
-];
-
-// Mock participants data
-const participantsMock: Participant[] = [
-  {
-    id: "1",
-    name: "Ana Rodríguez",
-    email: "ana.rodriguez@example.com",
-    registrationDate: "2023-06-01T10:30:00",
-    status: "confirmed",
-  },
-  {
-    id: "2",
-    name: "Carlos Mendoza",
-    email: "carlos.mendoza@example.com",
-    registrationDate: "2023-06-02T14:15:00",
-    status: "confirmed",
-  },
-  {
-    id: "3",
-    name: "María López",
-    email: "maria.lopez@example.com",
-    registrationDate: "2023-06-03T09:45:00",
-    status: "pending",
-  },
-  {
-    id: "4",
-    name: "Juan Pérez",
-    email: "juan.perez@example.com",
-    registrationDate: "2023-06-01T16:20:00",
-    status: "confirmed",
-  },
-  {
-    id: "5",
-    name: "Laura Torres",
-    email: "laura.torres@example.com",
-    registrationDate: "2023-06-04T11:10:00",
-    status: "cancelled",
-  },
-];
-
 export const AdminWorkshops: React.FC = () => {
   const [workshops, setWorkshops] = React.useState<Workshop[]>([]);
+  const [egresados, setEgresados] = React.useState([]);
+  const [taller_egresado, setTalleresEgresedaso] = React.useState([]);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<
     "all" | "upcoming" | "active" | "completed"
@@ -163,8 +63,7 @@ export const AdminWorkshops: React.FC = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
   const [isParticipantsModalOpen, setIsParticipantsModalOpen] =
     React.useState(false);
-  const [participants, setParticipants] =
-    React.useState<Participant[]>(participantsMock);
+  const [participants, setParticipants] = React.useState<Participant[]>([]);
 
   useEffect(() => {
     const getTalleres = async () => {
@@ -182,6 +81,89 @@ export const AdminWorkshops: React.FC = () => {
 
     getTalleres();
   }, []);
+
+  useEffect(() => {
+    const getEgresados = async () => {
+      const { error, data } = await supabase
+        .from("egresados")
+        .select("*")
+        .order("id", { ascending: false });
+
+      setEgresados(data);
+
+      if (error) {
+        throw error;
+      }
+    };
+
+    getEgresados();
+  }, []);
+
+  useEffect(() => {
+    const getTalleresEgresados = async () => {
+      const { error, data } = await supabase
+        .from("taller_egresado")
+        .select("*")
+        .order("id", { ascending: false });
+
+      setTalleresEgresedaso(data);
+
+      if (error) {
+        throw error;
+      }
+    };
+
+    getTalleresEgresados();
+  }, []);
+
+  useEffect(() => {
+    if (egresados.length > 0 && taller_egresado.length > 0) {
+      const generateParticipants = () => {
+        const participantsData = taller_egresado
+          .map((tallerEgresado) => {
+            // Buscar el egresado correspondiente
+            const egresado = egresados.find(
+              (e) => e.id === tallerEgresado.egresadoId
+            );
+
+            if (egresado) {
+              return {
+                id: egresado.id.toString(),
+                name: egresado.name,
+                email: egresado.email,
+                registrationDate: tallerEgresado.fechaPostulacion,
+                status: "confirmed" as const, // Puedes cambiar esto según tu lógica
+                // Datos adicionales si los necesitas
+                tallerId: tallerEgresado.tallerId,
+                phone: egresado.phone,
+                career: egresado.career,
+                graduationYear: egresado.graduationYear,
+              };
+            }
+            return null;
+          })
+          .filter(Boolean); // Filtrar valores null
+
+        setParticipants(participantsData);
+      };
+
+      generateParticipants();
+    }
+  }, [egresados, taller_egresado]);
+
+  // Función para obtener participantes de un taller específico
+  const getParticipantsByWorkshop = (workshopId: number) => {
+    return participants.filter(
+      (participant) => participant.tallerId === workshopId
+    );
+  };
+
+  // Función para obtener el conteo de participantes por taller
+  const getParticipantCountByWorkshop = (workshopId: number) => {
+    return participants.filter(
+      (participant) => participant.tallerId === workshopId
+    ).length;
+  };
 
   // Form state
   const [formData, setFormData] = React.useState({
@@ -209,6 +191,14 @@ export const AdminWorkshops: React.FC = () => {
 
   // Filter workshops based on search term and status
   const filteredWorkshops = workshops.filter((workshop) => {
+    // Contar participantes reales basándose en taller_egresado
+    const participantCount = taller_egresado.filter(
+      (egresado) => egresado.tallerId === workshop.id
+    ).length;
+
+    // Agregar la propiedad participants al workshop
+    workshop.participants = participantCount;
+
     const matchesSearch =
       workshop.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       workshop.description.toLowerCase().includes(searchTerm.toLowerCase());
@@ -444,7 +434,7 @@ export const AdminWorkshops: React.FC = () => {
         description: formData.description,
         date: `${formData.date}T${formData.time}`,
         link: formData.link,
-        status: formData.status as Workshop['status'],
+        status: formData.status as Workshop["status"],
         maxParticipants: parseInt(formData.maxParticipants),
         image: formData.image
           ? URL.createObjectURL(formData.image) // ⚠ solo para vista previa
@@ -1273,9 +1263,9 @@ export const AdminWorkshops: React.FC = () => {
                     </Button>
                   </div>
 
-                  {participants.length > 0 ? (
+                  {getParticipantsByWorkshop(parseInt(selectedWorkshop.id)).length > 0 ? (
                     <div className="space-y-3">
-                      {participants.map((participant) => (
+                      {getParticipantsByWorkshop(parseInt(selectedWorkshop.id)).map((participant) => (
                         <div
                           key={participant.id}
                           className="p-3 bg-content2 rounded-lg flex flex-col sm:flex-row justify-between gap-2"
