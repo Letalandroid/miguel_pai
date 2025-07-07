@@ -1,69 +1,236 @@
-import React from "react";
-import { Card, CardBody, CardHeader, CardFooter, Button, Chip, Divider, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@heroui/react";
+import React, { useEffect } from "react";
+import {
+  Card,
+  CardBody,
+  CardHeader,
+  CardFooter,
+  Button,
+  Chip,
+  Divider,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Input,
+  Select,
+  SelectItem,
+  Textarea,
+} from "@heroui/react";
 import { Icon } from "@iconify/react";
 import { motion } from "framer-motion";
 import { addToast } from "@heroui/react";
+import { supabase } from "../../../supabase/client";
+import { useAuth } from "../../login/auth-context";
 
 // Meeting type definition
 interface Meeting {
   id: string;
+  graduateName: string;
+  graduateId: string;
+  companyId?: number;
   date: string;
   type: string;
   status: "scheduled" | "completed" | "cancelled";
   observations?: string;
-  canCancel: boolean;
 }
 
-// Mock data
-const meetingsMock: Meeting[] = [
-  {
-    id: "1",
-    date: "2023-06-15T10:00:00",
-    type: "Orientación Profesional",
-    status: "scheduled",
-    observations: "Preparar preguntas sobre desarrollo profesional y oportunidades en el sector tecnológico.",
-    canCancel: true
-  },
-  {
-    id: "2",
-    date: "2023-06-18T15:30:00",
-    type: "Revisión de CV",
-    status: "scheduled",
-    observations: "Traer CV actualizado y ejemplos de trabajos anteriores.",
-    canCancel: true
-  },
-  {
-    id: "3",
-    date: "2023-05-20T11:00:00",
-    type: "Asesoría Laboral",
-    status: "completed",
-    observations: "Se discutieron estrategias para mejorar la presencia en LinkedIn y optimizar el CV.",
-    canCancel: false
-  },
-  {
-    id: "4",
-    date: "2023-05-10T09:30:00",
-    type: "Entrevista Simulada",
-    status: "cancelled",
-    observations: "Cancelada por el egresado.",
-    canCancel: false
-  }
+const meetingTypes = [
+  { value: "Asesoria", label: "Asesoría" },
+  { value: "Entrevista", label: "Entrevista" },
+  { value: "Reunion", label: "Reunión" },
 ];
 
 export const GraduateMeetings: React.FC = () => {
-  const [meetings, setMeetings] = React.useState<Meeting[]>(meetingsMock);
-  const [selectedMeeting, setSelectedMeeting] = React.useState<Meeting | null>(null);
+  const [meetings, setMeetings] = React.useState<Meeting[]>([]);
+  const [companies, setCompanies] = React.useState([]);
+  const [formData, setFormData] = React.useState({
+    companyId: 0,
+    date: "",
+    time: "",
+    type: "",
+    observations: "",
+  });
+  const [errors, setErrors] = React.useState({
+    companyId: 0,
+    date: "",
+    time: "",
+    type: "",
+    observations: "",
+  });
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = React.useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = React.useState(false);
-  const [isCancelModalOpen, setIsCancelModalOpen] = React.useState(false);
-  const [statusFilter, setStatusFilter] = React.useState<"all" | "scheduled" | "completed" | "cancelled">("all");
+  const [selectedMeeting, setSelectedMeeting] = React.useState<Meeting | null>(
+    null
+  );
+  const [statusFilter, setStatusFilter] = React.useState<
+    "all" | "scheduled" | "completed" | "cancelled"
+  >("all");
+  const { user } = useAuth();
 
-  // Filter meetings based on status
-  const filteredMeetings = meetings.filter(meeting => {
+  useEffect(() => {
+    const getCompanies = async () => {
+      const { error, data } = await supabase
+        .from("empresas")
+        .select("*")
+        .order("id", { ascending: false });
+
+      setCompanies(data);
+      console.log(data);
+
+      if (error) {
+        throw error;
+      }
+    };
+
+    getCompanies();
+  }, []);
+
+  useEffect(() => {
+    const getMeetings = async () => {
+      const { error, data } = await supabase
+        .from("meetings")
+        .select("*")
+        .order("id", { ascending: false });
+
+      setMeetings(data);
+
+      if (error) {
+        throw error;
+      }
+    };
+
+    getMeetings();
+  }, []);
+
+  // Filtrar reuniones por estado
+  const filteredMeetings = meetings.filter((meeting) => {
+    if (meeting.graduateId !== user.id) return false;
+
     if (statusFilter === "all") return true;
     return meeting.status === statusFilter;
   });
 
-  // Format date to readable string
+  // Validar formulario
+  const validateForm = () => {
+    const newErrors = {
+      companyId: 0,
+      date: "",
+      time: "",
+      type: "",
+      observations: "",
+    };
+
+    let isValid = true;
+
+    if (!formData.date) {
+      newErrors.date = "La fecha es obligatoria";
+      isValid = false;
+    }
+
+    if (!formData.time) {
+      newErrors.time = "La hora es obligatoria";
+      isValid = false;
+    }
+
+    if (!formData.type) {
+      newErrors.type = "El tipo de reunión es obligatorio";
+      isValid = false;
+    }
+
+    if (!formData.companyId || formData.companyId <= 0) {
+      newErrors.type = "El tipo de company es obligatorio";
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
+  // Manejar envío del formulario
+  const handleSubmit = async () => {
+    if (validateForm()) {
+      const { name: companyName } = companies.find((c) => {
+        return c.id === formData.companyId;
+      });
+
+      const newMeeting: Meeting = {
+        id: (meetings.length + 1).toString(),
+        graduateName: user.name,
+        graduateId: user.id,
+        companyId: formData.companyId,
+        date: `${formData.date}T${formData.time}:00`,
+        type: `${formData.type} - ${companyName}`,
+        status: "scheduled",
+        observations: formData.observations,
+      };
+
+      const { id, ...meetingData } = newMeeting;
+
+      const { error } = await supabase.from("meetings").insert(meetingData);
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      setMeetings([newMeeting, ...meetings]);
+      setIsScheduleModalOpen(false);
+
+      // Resetear formulario
+      setFormData({
+        companyId: 0,
+        date: "",
+        time: "",
+        type: "",
+        observations: "",
+      });
+
+      addToast({
+        title: "Reunión solicitada",
+        description: "Tu reunión ha sido solicitada correctamente.",
+        color: "success",
+      });
+    }
+  };
+
+  // Cancel meeting
+  const cancelMeeting = async () => {
+    if (selectedMeeting) {
+      const { error } = await supabase
+        .from("meetings")
+        .update({ status: "cancelled" })
+        .eq("id", selectedMeeting.id);
+
+      if (error) {
+        console.error(error);
+        addToast({
+          title: "Error",
+          description: "No se pudo cancelar la reunión",
+          color: "danger",
+        });
+        return;
+      }
+
+      // Update local state
+      const updatedMeetings = meetings.map((m) =>
+        m.id === selectedMeeting.id ? { ...m, status: "cancelled" as const } : m
+      );
+
+      setMeetings(updatedMeetings);
+      setIsScheduleModalOpen(false);
+      setIsDetailsModalOpen(false);
+
+      // Show success message
+      addToast({
+        title: "Reunión cancelada",
+        description: `La reunión con ${selectedMeeting.graduateName} ha sido cancelada`,
+        color: "success",
+      });
+    }
+  };
+
+  // Formatear fecha
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("es-ES", {
@@ -73,6 +240,11 @@ export const GraduateMeetings: React.FC = () => {
       hour: "2-digit",
       minute: "2-digit",
     });
+  };
+
+  const viewDetails = (meeting: Meeting) => {
+    setSelectedMeeting(meeting);
+    setIsDetailsModalOpen(true);
   };
 
   // Get status chip color
@@ -103,307 +275,306 @@ export const GraduateMeetings: React.FC = () => {
     }
   };
 
-  // Handle meeting cancellation
-  const handleCancelMeeting = (meeting: Meeting) => {
-    setSelectedMeeting(meeting);
-    setIsCancelModalOpen(true);
-  };
-
-  // Confirm cancellation
-  const confirmCancellation = () => {
-    if (selectedMeeting) {
-      // Update meeting status
-      const updatedMeetings = meetings.map(m => 
-        m.id === selectedMeeting.id ? { ...m, status: "cancelled" as const, canCancel: false } : m
-      );
-      
-      setMeetings(updatedMeetings);
-      setIsCancelModalOpen(false);
-      
-      // Show success message
-      addToast({
-        title: "Reunión cancelada",
-        description: `La reunión de ${selectedMeeting.type} ha sido cancelada.`,
-        color: "success"
-      });
-    }
-  };
-
-  // View meeting details
-  const viewDetails = (meeting: Meeting) => {
-    setSelectedMeeting(meeting);
-    setIsDetailsModalOpen(true);
-  };
-
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: {
-        duration: 0.5,
-        ease: [0.16, 1, 0.3, 1]
-      }
-    }
-  };
-
   return (
     <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
       className="max-w-7xl mx-auto"
     >
-      <motion.div variants={itemVariants} className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground-900">Mis Reuniones</h1>
-        <p className="text-foreground-600">
-          Gestiona tus reuniones programadas con asesores y empresas
-        </p>
-      </motion.div>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground-900">
+            Mis Reuniones
+          </h1>
+          <p className="text-foreground-600">
+            Gestiona tus reuniones programadas con asesores y empresas
+          </p>
+        </div>
+        <Button
+          color="primary"
+          startContent={
+            <Icon icon="lucide:calendar-plus" width={18} height={18} />
+          }
+          onPress={() => setIsScheduleModalOpen(true)}
+        >
+          Solicitar Nueva Reunión
+        </Button>
+      </div>
 
-      {/* Filters */}
-      <motion.div variants={itemVariants} className="mb-6">
-        <Card shadow="sm">
-          <CardBody className="flex flex-wrap gap-4">
-            <Button
-              color={statusFilter === "all" ? "primary" : "default"}
-              variant={statusFilter === "all" ? "flat" : "light"}
-              size="sm"
-              onPress={() => setStatusFilter("all")}
-            >
-              Todas
-            </Button>
-            <Button
-              color={statusFilter === "scheduled" ? "success" : "default"}
-              variant={statusFilter === "scheduled" ? "flat" : "light"}
-              size="sm"
-              onPress={() => setStatusFilter("scheduled")}
-            >
-              Programadas
-            </Button>
-            <Button
-              color={statusFilter === "completed" ? "primary" : "default"}
-              variant={statusFilter === "completed" ? "flat" : "light"}
-              size="sm"
-              onPress={() => setStatusFilter("completed")}
-            >
-              Completadas
-            </Button>
-            <Button
-              color={statusFilter === "cancelled" ? "danger" : "default"}
-              variant={statusFilter === "cancelled" ? "flat" : "light"}
-              size="sm"
-              onPress={() => setStatusFilter("cancelled")}
-            >
-              Canceladas
-            </Button>
-          </CardBody>
-        </Card>
-      </motion.div>
+      {/* Filtros */}
+      <Card shadow="sm" className="mb-6">
+        <CardBody className="flex flex-wrap gap-4">
+          <Button
+            color={statusFilter === "all" ? "primary" : "default"}
+            variant={statusFilter === "all" ? "flat" : "light"}
+            size="sm"
+            onPress={() => setStatusFilter("all")}
+          >
+            Todas
+          </Button>
+          <Button
+            color={statusFilter === "scheduled" ? "success" : "default"}
+            variant={statusFilter === "scheduled" ? "flat" : "light"}
+            size="sm"
+            onPress={() => setStatusFilter("scheduled")}
+          >
+            Programadas
+          </Button>
+          <Button
+            color={statusFilter === "completed" ? "primary" : "default"}
+            variant={statusFilter === "completed" ? "flat" : "light"}
+            size="sm"
+            onPress={() => setStatusFilter("completed")}
+          >
+            Completadas
+          </Button>
+          <Button
+            color={statusFilter === "cancelled" ? "danger" : "default"}
+            variant={statusFilter === "cancelled" ? "flat" : "light"}
+            size="sm"
+            onPress={() => setStatusFilter("cancelled")}
+          >
+            Canceladas
+          </Button>
+        </CardBody>
+      </Card>
 
-      {/* Meetings list */}
+      {/* Lista de reuniones */}
       {filteredMeetings.length > 0 ? (
-        <motion.div variants={itemVariants}>
-          <Card shadow="sm">
-            <CardHeader>
-              <h2 className="text-xl font-semibold">Reuniones</h2>
-            </CardHeader>
-            <Divider />
-            <CardBody className="space-y-4">
-              {filteredMeetings.map((meeting) => (
-                <div 
-                  key={meeting.id} 
-                  className="p-4 bg-content2 rounded-lg flex flex-col md:flex-row justify-between gap-4"
-                >
-                  <div className="flex-grow">
-                    <div className="flex flex-wrap items-center gap-2 mb-2">
-                      <h3 className="text-lg font-medium">{meeting.type}</h3>
-                      <Chip
-                        color={getStatusColor(meeting.status)}
-                        variant="flat"
-                        size="sm"
-                      >
-                        {getStatusText(meeting.status)}
-                      </Chip>
-                    </div>
-                    <p className="text-default-600 flex items-center gap-1 mb-1">
-                      <Icon icon="lucide:calendar" width={16} height={16} />
-                      {formatDate(meeting.date)}
+        <Card shadow="sm">
+          <CardHeader>
+            <h2 className="text-xl font-semibold">Reuniones</h2>
+          </CardHeader>
+          <Divider />
+          <CardBody className="space-y-4">
+            {filteredMeetings.map((meeting) => (
+              <div
+                key={meeting.id}
+                className="p-4 bg-content2 rounded-lg flex flex-col md:flex-row justify-between gap-4"
+              >
+                <div>
+                  <h3 className="text-lg font-medium">{meeting.type}</h3>
+                  <p className="flex items-center gap-1 text-default-600">
+                    <Icon icon="lucide:calendar" width={16} height={16} />{" "}
+                    {formatDate(meeting.date)}
+                  </p>
+                  {meeting.observations && (
+                    <p className="text-small text-default-500">
+                      Observaciones: {meeting.observations}
                     </p>
-                    {meeting.observations && (
-                      <p className="text-small text-default-500 line-clamp-1">
-                        <span className="font-medium">Observaciones:</span> {meeting.observations}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap gap-2 self-end md:self-center">
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2 self-end md:self-center">
+                  <Button
+                    size="sm"
+                    color="primary"
+                    variant="flat"
+                    onPress={() => viewDetails(meeting)}
+                  >
+                    Ver Detalles
+                  </Button>
+                  {meeting.status === "scheduled" && (
                     <Button
                       size="sm"
-                      color="primary"
-                      variant="flat"
-                      onPress={() => viewDetails(meeting)}
+                      color="danger"
+                      variant="light"
+                      onPress={() => cancelMeeting()}
                     >
-                      Ver Detalles
+                      Cancelar
                     </Button>
-                    {meeting.status === "scheduled" && meeting.canCancel && (
-                      <Button
-                        size="sm"
-                        color="danger"
-                        variant="light"
-                        onPress={() => handleCancelMeeting(meeting)}
-                      >
-                        Cancelar
-                      </Button>
-                    )}
-                  </div>
+                  )}
                 </div>
-              ))}
-            </CardBody>
-            <Divider />
-            <CardFooter>
-              <Button
-                color="primary"
-                variant="flat"
-                startContent={<Icon icon="lucide:calendar-plus" width={18} height={18} />}
-                className="ml-auto"
-              >
-                Solicitar Nueva Reunión
-              </Button>
-            </CardFooter>
-          </Card>
-        </motion.div>
+              </div>
+            ))}
+          </CardBody>
+        </Card>
       ) : (
-        <motion.div variants={itemVariants} className="text-center py-12">
-          <Icon icon="lucide:calendar-x" className="mx-auto mb-4 text-default-400" width={48} height={48} />
-          <h3 className="text-xl font-medium text-foreground-800">No se encontraron reuniones</h3>
+        <div className="text-center py-12">
+          <Icon
+            icon="lucide:calendar-x"
+            className="mx-auto mb-4 text-default-400"
+            width={48}
+            height={48}
+          />
+          <h3 className="text-xl font-medium text-foreground-800">
+            No se encontraron reuniones
+          </h3>
           <p className="text-default-500 mt-2">
-            {statusFilter === "all" 
-              ? "No tienes reuniones programadas. Solicita una nueva reunión." 
-              : `No tienes reuniones con estado "${getStatusText(statusFilter)}".`}
+            No tienes reuniones programadas. Solicita una nueva reunión.
           </p>
-          <Button
-            color="primary"
-            className="mt-6"
-            startContent={<Icon icon="lucide:calendar-plus" width={18} height={18} />}
-          >
-            Solicitar Nueva Reunión
-          </Button>
-        </motion.div>
+        </div>
       )}
 
-      {/* Meeting details modal */}
-      <Modal isOpen={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen} size="lg">
+      {/* Modal para solicitar reunión */}
+      <Modal
+        isOpen={isScheduleModalOpen}
+        onOpenChange={setIsScheduleModalOpen}
+        size="lg"
+      >
         <ModalContent>
-          {(onClose) => selectedMeeting && (
+          {(onClose) => (
             <>
-              <ModalHeader className="flex flex-col gap-1">
-                Detalles de la Reunión
-              </ModalHeader>
+              <ModalHeader>Solicitar Nueva Reunión</ModalHeader>
               <ModalBody>
                 <div className="space-y-4">
-                  <div>
-                    <h3 className="text-lg font-semibold">{selectedMeeting.type}</h3>
-                    <Chip
-                      color={getStatusColor(selectedMeeting.status)}
-                      variant="flat"
-                      className="mt-1"
-                    >
-                      {getStatusText(selectedMeeting.status)}
-                    </Chip>
-                  </div>
-                  
-                  <div className="bg-content2 p-4 rounded-lg space-y-3">
-                    <div>
-                      <p className="text-small text-default-500">Fecha y hora:</p>
-                      <p className="font-medium flex items-center gap-2">
-                        <Icon icon="lucide:calendar" width={16} height={16} />
-                        {formatDate(selectedMeeting.date)}
-                      </p>
-                    </div>
-                    
-                    {selectedMeeting.observations && (
-                      <div>
-                        <p className="text-small text-default-500">Observaciones:</p>
-                        <p className="font-medium">{selectedMeeting.observations}</p>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {selectedMeeting.status === "scheduled" && (
-                    <div className="bg-content3 p-4 rounded-lg">
-                      <p className="text-small">
-                        <Icon icon="lucide:info" className="inline mr-1" width={16} height={16} />
-                        Recuerda estar disponible 5 minutos antes de la hora programada.
-                      </p>
-                    </div>
-                  )}
+                  <Select
+                    label="Empresa"
+                    placeholder="Selecciona una empresa"
+                    selectedKeys={
+                      formData.companyId ? [formData.companyId.toString()] : []
+                    }
+                    onSelectionChange={(keys) => {
+                      const selectedKey = Array.from(keys)[0].toString();
+                      setFormData({
+                        ...formData,
+                        companyId: selectedKey ? parseInt(selectedKey) : 0,
+                      });
+                    }}
+                    isInvalid={!!errors.companyId}
+                    errorMessage={errors.companyId}
+                    isRequired
+                  >
+                    {companies.map((c) => (
+                      <SelectItem
+                        key={c.id.toString()}
+                        textValue={`${c.name} - ${c.email}`}
+                      >
+                        {c.name} - {c.email}
+                      </SelectItem>
+                    ))}
+                  </Select>
+                  <Input
+                    type="date"
+                    label="Fecha"
+                    value={formData.date}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, date: value })
+                    }
+                    isInvalid={!!errors.date}
+                    errorMessage={errors.date}
+                  />
+                  <Input
+                    type="time"
+                    label="Hora"
+                    value={formData.time}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, time: value })
+                    }
+                    isInvalid={!!errors.time}
+                    errorMessage={errors.time}
+                  />
+                  <Select
+                    label="Tipo de reunión"
+                    placeholder="Selecciona el tipo de reunión"
+                    selectedKeys={formData.type ? [formData.type] : []}
+                    onChange={(e) =>
+                      setFormData({ ...formData, type: e.target.value })
+                    }
+                    isInvalid={!!errors.type}
+                    errorMessage={errors.type}
+                  >
+                    {meetingTypes.map((type) => (
+                      <SelectItem key={type.value}>{type.label}</SelectItem>
+                    ))}
+                  </Select>
+                  <Textarea
+                    label="Observaciones"
+                    placeholder="Agrega notas o detalles sobre la reunión"
+                    value={formData.observations}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, observations: value })
+                    }
+                  />
                 </div>
               </ModalBody>
               <ModalFooter>
                 <Button color="default" variant="light" onPress={onClose}>
-                  Cerrar
+                  Cancelar
                 </Button>
-                {selectedMeeting.status === "scheduled" && selectedMeeting.canCancel && (
-                  <Button
-                    color="danger"
-                    onPress={() => {
-                      onClose();
-                      handleCancelMeeting(selectedMeeting);
-                    }}
-                  >
-                    Cancelar Reunión
-                  </Button>
-                )}
+                <Button color="primary" onPress={handleSubmit}>
+                  Solicitar Reunión
+                </Button>
               </ModalFooter>
             </>
           )}
         </ModalContent>
       </Modal>
 
-      {/* Cancellation confirmation modal */}
-      <Modal isOpen={isCancelModalOpen} onOpenChange={setIsCancelModalOpen} size="sm">
+      {/* Modal para ver detalles */}
+      <Modal
+        isOpen={isDetailsModalOpen}
+        onOpenChange={setIsDetailsModalOpen}
+        size="lg"
+      >
         <ModalContent>
-          {(onClose) => selectedMeeting && (
-            <>
-              <ModalHeader className="flex flex-col gap-1">
-                Confirmar Cancelación
-              </ModalHeader>
-              <ModalBody>
-                <p>
-                  ¿Estás seguro que deseas cancelar la reunión de <strong>{selectedMeeting.type}</strong>?
-                </p>
-                <p className="text-small text-default-500 mt-2">
-                  Fecha: {formatDate(selectedMeeting.date)}
-                </p>
-                <p className="text-small text-danger mt-4">
-                  <Icon icon="lucide:alert-triangle" className="inline mr-1" width={16} height={16} />
-                  Esta acción no se puede deshacer.
-                </p>
-              </ModalBody>
-              <ModalFooter>
-                <Button color="default" variant="light" onPress={onClose}>
-                  Volver
-                </Button>
-                <Button
-                  color="danger"
-                  onPress={confirmCancellation}
-                >
-                  Confirmar Cancelación
-                </Button>
-              </ModalFooter>
-            </>
-          )}
+          {(onClose) =>
+            selectedMeeting && (
+              <>
+                <ModalHeader className="flex flex-col gap-1">
+                  Detalles de la Reunión
+                </ModalHeader>
+                <ModalBody>
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-lg font-semibold">
+                        {selectedMeeting.type}
+                      </h3>
+                      <Chip
+                        color={getStatusColor(selectedMeeting.status)}
+                        variant="flat"
+                        className="mt-1"
+                      >
+                        {getStatusText(selectedMeeting.status)}
+                      </Chip>
+                    </div>
+
+                    <div className="bg-content2 p-4 rounded-lg space-y-3">
+                      <div>
+                        <p className="text-small text-default-500">
+                          Fecha y hora:
+                        </p>
+                        <p className="font-medium flex items-center gap-2">
+                          <Icon icon="lucide:calendar" width={16} height={16} />
+                          {formatDate(selectedMeeting.date)}
+                        </p>
+                      </div>
+
+                      {selectedMeeting.observations && (
+                        <div>
+                          <p className="text-small text-default-500">
+                            Observaciones:
+                          </p>
+                          <p className="font-medium">
+                            {selectedMeeting.observations}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {selectedMeeting.status === "scheduled" && (
+                      <div className="bg-content3 p-4 rounded-lg">
+                        <p className="text-small">
+                          <Icon
+                            icon="lucide:info"
+                            className="inline mr-1"
+                            width={16}
+                            height={16}
+                          />
+                          Recuerda estar disponible 5 minutos antes de la hora
+                          programada.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </ModalBody>
+                <ModalFooter>
+                  <Button color="default" variant="light" onPress={onClose}>
+                    Cerrar
+                  </Button>
+                </ModalFooter>
+              </>
+            )
+          }
         </ModalContent>
       </Modal>
     </motion.div>
