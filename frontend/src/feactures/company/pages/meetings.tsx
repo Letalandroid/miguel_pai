@@ -50,57 +50,6 @@ const meetingTypes = [
   { value: "feedback", label: "Sesión de Feedback" },
 ];
 
-// Mock data
-const meetingsMock: Meeting[] = [
-  {
-    id: "1",
-    graduateName: "Ana Rodríguez",
-    graduateId: "1",
-    date: "2023-06-15T10:00:00",
-    type: "Entrevista Inicial",
-    status: "scheduled",
-    observations: "Revisar CV y portafolio antes de la reunión.",
-  },
-  {
-    id: "2",
-    graduateName: "Carlos Mendoza",
-    graduateId: "2",
-    date: "2023-06-18T15:30:00",
-    type: "Evaluación Técnica",
-    status: "scheduled",
-    observations: "Preparar ejercicios prácticos de programación.",
-  },
-  {
-    id: "3",
-    graduateName: "María López",
-    graduateId: "3",
-    date: "2023-05-20T11:00:00",
-    type: "Entrevista Final",
-    status: "completed",
-    observations:
-      "Candidata con buen perfil técnico y habilidades de comunicación.",
-  },
-  {
-    id: "4",
-    graduateName: "Pedro Gómez",
-    graduateId: "4",
-    date: "2023-05-10T09:30:00",
-    type: "Entrevista Inicial",
-    status: "cancelled",
-    observations: "Cancelada por el candidato.",
-  },
-];
-
-// Mock graduates
-const graduatesMock: Graduate[] = [
-  { id: "1", name: "Ana Rodríguez", career: "Ingeniería de Sistemas" },
-  { id: "2", name: "Carlos Mendoza", career: "Ingeniería de Software" },
-  { id: "3", name: "María López", career: "Diseño Gráfico" },
-  { id: "4", name: "Pedro Gómez", career: "Marketing Digital" },
-  { id: "5", name: "Laura Torres", career: "Administración de Empresas" },
-  { id: "6", name: "Juan Pérez", career: "Ingeniería Industrial" },
-];
-
 export const CompanyMeetings: React.FC = () => {
   const [meetings, setMeetings] = React.useState<Meeting[]>([]);
   const [egresados, setEgresados] = React.useState<Graduate[]>([]);
