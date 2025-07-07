@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useMemo } from "react";
 import {
   Card,
   CardBody,
@@ -28,6 +28,7 @@ interface Meeting {
   id: string;
   graduateName: string;
   graduateId: string;
+  companyId?: string;
   date: string;
   type: string;
   status: "scheduled" | "completed" | "cancelled";
@@ -101,8 +102,8 @@ const graduatesMock: Graduate[] = [
 ];
 
 export const CompanyMeetings: React.FC = () => {
-  const [meetings, setMeetings] = React.useState<Meeting[]>(meetingsMock);
-  const [graduates] = React.useState<Graduate[]>(graduatesMock);
+  const [meetings, setMeetings] = React.useState<Meeting[]>([]);
+  const [egresados, setEgresados] = React.useState<Graduate[]>([]);
   const [selectedMeeting, setSelectedMeeting] = React.useState<Meeting | null>(
     null
   );
@@ -113,6 +114,40 @@ export const CompanyMeetings: React.FC = () => {
     "all" | "scheduled" | "completed" | "cancelled"
   >("all");
   const { user } = useAuth();
+
+  useEffect(() => {
+    const getEgresados = async () => {
+      const { error, data } = await supabase
+        .from("egresados")
+        .select("*")
+        .order("id", { ascending: false });
+
+      setEgresados(data);
+
+      if (error) {
+        throw error;
+      }
+    };
+
+    getEgresados();
+  }, []);
+
+  useEffect(() => {
+    const getMeetings = async () => {
+      const { error, data } = await supabase
+        .from("meetings")
+        .select("*")
+        .order("id", { ascending: false });
+
+      setMeetings(data);
+
+      if (error) {
+        throw error;
+      }
+    };
+
+    getMeetings();
+  }, [meetings]);
 
   // Form state
   const [formData, setFormData] = React.useState({
@@ -133,10 +168,16 @@ export const CompanyMeetings: React.FC = () => {
   });
 
   // Filter meetings based on status
-  const filteredMeetings = meetings.filter((meeting) => {
-    if (statusFilter === "all") return true;
-    return meeting.status === statusFilter;
-  });
+  const filteredMeetings = useMemo(() => {
+    return meetings.filter((meeting) => {
+      // Filtrar por companyId que coincida con user.id
+      if (meeting.companyId != user.id) return false;
+
+      // Filtrar por status
+      if (statusFilter === "all") return true;
+      return meeting.status === statusFilter;
+    });
+  }, [meetings, statusFilter, user.id]);
 
   // Format date to readable string
   const formatDate = (dateString: string) => {
@@ -243,7 +284,7 @@ export const CompanyMeetings: React.FC = () => {
   const handleSubmit = async () => {
     if (validateForm()) {
       // Get graduate name
-      const graduate = graduates.find((g) => g.id === formData.graduateId);
+      const graduate = egresados.find((g) => g.id == formData.graduateId);
 
       if (!graduate) {
         setErrors({
@@ -254,7 +295,7 @@ export const CompanyMeetings: React.FC = () => {
       }
 
       // Create new meeting
-      const newMeeting: Meeting = {
+      const addMetting: Meeting = {
         id: (meetings.length + 1).toString(),
         graduateName: graduate.name,
         graduateId: formData.graduateId,
@@ -266,12 +307,23 @@ export const CompanyMeetings: React.FC = () => {
         observations: formData.observations,
       };
 
+      const { id, ...newMeeting } = addMetting;
+
       const { error } = await supabase.from("meetings").insert({
         ...newMeeting,
         companyId: user.id,
       });
 
-      setMeetings([newMeeting, ...meetings]);
+      if (error) {
+        console.error(error);
+        setErrors({
+          ...errors,
+          graduateId: "Error al crear la reunión",
+        });
+        return;
+      }
+
+      setMeetings([addMetting, ...meetings]);
       setIsScheduleModalOpen(false);
 
       // Reset form
@@ -299,8 +351,24 @@ export const CompanyMeetings: React.FC = () => {
   };
 
   // Cancel meeting
-  const cancelMeeting = () => {
+  const cancelMeeting = async () => {
     if (selectedMeeting) {
+      const { error } = await supabase
+        .from("meetings")
+        .update({ status: "cancelled" })
+        .eq("id", selectedMeeting.id);
+
+      if (error) {
+        console.error(error);
+        addToast({
+          title: "Error",
+          description: "No se pudo cancelar la reunión",
+          color: "danger",
+        });
+        return;
+      }
+
+      // Update local state
       const updatedMeetings = meetings.map((m) =>
         m.id === selectedMeeting.id ? { ...m, status: "cancelled" as const } : m
       );
@@ -319,7 +387,23 @@ export const CompanyMeetings: React.FC = () => {
   };
 
   // Mark meeting as completed
-  const completeMeeting = (meeting: Meeting) => {
+  const completeMeeting = async (meeting: Meeting) => {
+    const { error } = await supabase
+      .from("meetings")
+      .update({ status: "completed" })
+      .eq("id", meeting.id);
+
+    if (error) {
+      console.error(error);
+      addToast({
+        title: "Error",
+        description: "No se pudo completar la reunión",
+        color: "danger",
+      });
+      return;
+    }
+
+    // Update local state
     const updatedMeetings = meetings.map((m) =>
       m.id === meeting.id ? { ...m, status: "completed" as const } : m
     );
@@ -660,8 +744,11 @@ export const CompanyMeetings: React.FC = () => {
                     errorMessage={errors.graduateId}
                     isRequired
                   >
-                    {graduates.map((graduate) => (
-                      <SelectItem key={graduate.id}>
+                    {egresados.map((graduate) => (
+                      <SelectItem
+                        key={graduate.id}
+                        textValue={`${graduate.name} - ${graduate.career}`}
+                      >
                         {graduate.name} - {graduate.career}
                       </SelectItem>
                     ))}
