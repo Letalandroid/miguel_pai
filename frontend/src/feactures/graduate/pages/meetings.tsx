@@ -76,7 +76,6 @@ export const GraduateMeetings: React.FC = () => {
         .order("id", { ascending: false });
 
       setCompanies(data);
-      console.log(data);
 
       if (error) {
         throw error;
