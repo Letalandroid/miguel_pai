@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Card,
   CardBody,
@@ -29,7 +29,8 @@ interface Meeting {
   graduateName: string;
   graduateId: string;
   companyId?: number;
-  date: string;
+  dateInit: string;
+  dateEnd: string;
   type: string;
   status: "scheduled" | "completed" | "cancelled";
   observations?: string;
@@ -43,18 +44,22 @@ const meetingTypes = [
 
 export const GraduateMeetings: React.FC = () => {
   const [meetings, setMeetings] = React.useState<Meeting[]>([]);
+  const [reload, setReload] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [companies, setCompanies] = React.useState([]);
   const [formData, setFormData] = React.useState({
     companyId: 0,
     date: "",
-    time: "",
+    timeInit: "",
+    timeEnd: "",
     type: "",
     observations: "",
   });
   const [errors, setErrors] = React.useState({
     companyId: 0,
     date: "",
-    time: "",
+    timeInit: "",
+    timeEnd: "",
     type: "",
     observations: "",
   });
@@ -100,7 +105,7 @@ export const GraduateMeetings: React.FC = () => {
     };
 
     getMeetings();
-  }, []);
+  }, [reload]);
 
   // Filtrar reuniones por estado
   const filteredMeetings = meetings.filter((meeting) => {
@@ -115,7 +120,8 @@ export const GraduateMeetings: React.FC = () => {
     const newErrors = {
       companyId: 0,
       date: "",
-      time: "",
+      timeInit: "",
+      timeEnd: "",
       type: "",
       observations: "",
     };
@@ -127,8 +133,18 @@ export const GraduateMeetings: React.FC = () => {
       isValid = false;
     }
 
-    if (!formData.time) {
-      newErrors.time = "La hora es obligatoria";
+    if (!formData.timeInit) {
+      newErrors.timeInit = "La hora de inicio es obligatoria";
+      isValid = false;
+    }
+
+    if (!formData.timeEnd) {
+      newErrors.timeEnd = "La hora de fin es obligatoria";
+      isValid = false;
+    }
+
+    if (formData.timeEnd < formData.timeInit) {
+      newErrors.timeEnd = "Debe colocar una hora mayor a la inicial.";
       isValid = false;
     }
 
@@ -146,8 +162,24 @@ export const GraduateMeetings: React.FC = () => {
     return isValid;
   };
 
+  function hasConflict(newMeeting: Meeting, meetings: Meeting[]): boolean {
+    const newStart = new Date(newMeeting.dateInit).getTime();
+    const newEnd = new Date(newMeeting.dateEnd).getTime();
+
+    return meetings.some((m) => {
+      // Asegura que los IDs sean comparables (números o strings)
+      if (String(m.graduateId) !== String(newMeeting.graduateId)) return false;
+
+      const existingStart = new Date(m.dateInit).getTime();
+      const existingEnd = new Date(m.dateEnd).getTime();
+
+      return newStart < existingEnd && newEnd > existingStart;
+    });
+  }
+
   // Manejar envío del formulario
   const handleSubmit = async () => {
+    setIsLoading(true);
     if (validateForm()) {
       const { name: companyName } = companies.find((c) => {
         return c.id === formData.companyId;
@@ -158,11 +190,22 @@ export const GraduateMeetings: React.FC = () => {
         graduateName: user.name,
         graduateId: user.id,
         companyId: formData.companyId,
-        date: `${formData.date}T${formData.time}:00`,
+        dateInit: `${formData.date}T${formData.timeInit}:00`,
+        dateEnd: `${formData.date}T${formData.timeEnd}:00`,
         type: `${formData.type} - ${companyName}`,
         status: "scheduled",
         observations: formData.observations,
       };
+
+      if (hasConflict(newMeeting, meetings)) {
+        setErrors({
+          ...errors,
+          timeInit: "Por favor elegir otro horario.",
+          timeEnd: "Por favor elegir otro horario.",
+        });
+        setIsLoading(false);
+        return;
+      }
 
       const { id, ...meetingData } = newMeeting;
 
@@ -170,6 +213,7 @@ export const GraduateMeetings: React.FC = () => {
 
       if (error) {
         console.error(error);
+        setIsLoading(false);
         return;
       }
 
@@ -180,7 +224,8 @@ export const GraduateMeetings: React.FC = () => {
       setFormData({
         companyId: 0,
         date: "",
-        time: "",
+        timeInit: "",
+        timeEnd: "",
         type: "",
         observations: "",
       });
@@ -355,7 +400,8 @@ export const GraduateMeetings: React.FC = () => {
                   <h3 className="text-lg font-medium">{meeting.type}</h3>
                   <p className="flex items-center gap-1 text-default-600">
                     <Icon icon="lucide:calendar" width={16} height={16} />{" "}
-                    {formatDate(meeting.date)}
+                    {formatDate(meeting.dateInit)} -
+                    {formatDate(meeting.dateEnd).split(", ")[1]}
                   </p>
                   {meeting.observations && (
                     <p className="text-small text-default-500">
@@ -452,16 +498,31 @@ export const GraduateMeetings: React.FC = () => {
                     isInvalid={!!errors.date}
                     errorMessage={errors.date}
                   />
-                  <Input
-                    type="time"
-                    label="Hora"
-                    value={formData.time}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, time: value })
-                    }
-                    isInvalid={!!errors.time}
-                    errorMessage={errors.time}
-                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Input
+                      type="time"
+                      label="Hora Inicio"
+                      value={formData.timeInit}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, timeInit: value })
+                      }
+                      isInvalid={!!errors.timeInit}
+                      errorMessage={errors.timeInit}
+                      isRequired
+                    />
+
+                    <Input
+                      type="time"
+                      label="Hora Fin"
+                      value={formData.timeEnd}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, timeEnd: value })
+                      }
+                      isInvalid={!!errors.timeEnd}
+                      errorMessage={errors.timeEnd}
+                      isRequired
+                    />
+                  </div>
                   <Select
                     label="Tipo de reunión"
                     placeholder="Selecciona el tipo de reunión"
@@ -490,7 +551,11 @@ export const GraduateMeetings: React.FC = () => {
                 <Button color="default" variant="light" onPress={onClose}>
                   Cancelar
                 </Button>
-                <Button color="primary" onPress={handleSubmit}>
+                <Button
+                  color="primary"
+                  onPress={handleSubmit}
+                  isLoading={isLoading}
+                >
                   Solicitar Reunión
                 </Button>
               </ModalFooter>
@@ -534,7 +599,8 @@ export const GraduateMeetings: React.FC = () => {
                         </p>
                         <p className="font-medium flex items-center gap-2">
                           <Icon icon="lucide:calendar" width={16} height={16} />
-                          {formatDate(selectedMeeting.date)}
+                          {formatDate(selectedMeeting.dateInit)} -
+                          {formatDate(selectedMeeting.dateEnd).split(", ")[1]}
                         </p>
                       </div>
 
