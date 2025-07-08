@@ -41,6 +41,7 @@ interface Graduate {
   id: string;
   name: string;
   career: string;
+  email?: string;
 }
 
 // Meeting type options
@@ -56,6 +57,7 @@ export const CompanyMeetings: React.FC = () => {
   const [reload, setReload] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [egresados, setEgresados] = React.useState<Graduate[]>([]);
+  const [diositos, setDiositos] = React.useState([]);
   const [selectedMeeting, setSelectedMeeting] = React.useState<Meeting | null>(
     null
   );
@@ -68,20 +70,32 @@ export const CompanyMeetings: React.FC = () => {
   const { user } = useAuth();
 
   useEffect(() => {
-    const getEgresados = async () => {
-      const { error, data } = await supabase
-        .from("egresados")
-        .select("*")
-        .order("id", { ascending: false });
+    const fetchData = async () => {
+      try {
+        const { data: companyData, error: companyError } = await supabase
+          .from("empresas")
+          .select("*")
+          .order("id", { ascending: false });
 
-      setEgresados(data);
+        if (companyError) throw companyError;
 
-      if (error) {
-        throw error;
+        const admins = companyData.filter((d) => d.role === "admin");
+
+        const { data: egresadosData, error: egresadosError } = await supabase
+          .from("egresados")
+          .select("*")
+          .order("id", { ascending: false });
+
+        if (egresadosError) throw egresadosError;
+
+        setDiositos(admins);
+        setEgresados([...egresadosData, ...admins]);
+      } catch (error) {
+        console.error("Error al cargar datos:", error);
       }
     };
 
-    getEgresados();
+    fetchData();
   }, []);
 
   useEffect(() => {
@@ -747,7 +761,7 @@ export const CompanyMeetings: React.FC = () => {
                         key={graduate.id}
                         textValue={`${graduate.name} - ${graduate.career}`}
                       >
-                        {graduate.name} - {graduate.career}
+                        {graduate.name} - {graduate.career ? graduate.career : graduate.email}
                       </SelectItem>
                     ))}
                   </Select>
