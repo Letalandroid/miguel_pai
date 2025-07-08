@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Card,
   CardBody,
@@ -29,7 +29,8 @@ interface Meeting {
   graduateName: string;
   graduateId: string;
   companyId?: string;
-  date: string;
+  dateInit: string;
+  dateEnd: string;
   type: string;
   status: "scheduled" | "completed" | "cancelled";
   observations?: string;
@@ -52,6 +53,8 @@ const meetingTypes = [
 
 export const CompanyMeetings: React.FC = () => {
   const [meetings, setMeetings] = React.useState<Meeting[]>([]);
+  const [reload, setReload] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [egresados, setEgresados] = React.useState<Graduate[]>([]);
   const [selectedMeeting, setSelectedMeeting] = React.useState<Meeting | null>(
     null
@@ -96,13 +99,14 @@ export const CompanyMeetings: React.FC = () => {
     };
 
     getMeetings();
-  }, [meetings]);
+  }, [reload]);
 
   // Form state
   const [formData, setFormData] = React.useState({
     graduateId: "",
     date: "",
-    time: "",
+    timeInit: "",
+    timeEnd: "",
     type: "",
     observations: "",
   });
@@ -111,7 +115,8 @@ export const CompanyMeetings: React.FC = () => {
   const [errors, setErrors] = React.useState({
     graduateId: "",
     date: "",
-    time: "",
+    timeInit: "",
+    timeEnd: "",
     type: "",
     observations: "",
   });
@@ -189,7 +194,8 @@ export const CompanyMeetings: React.FC = () => {
     const newErrors = {
       graduateId: "",
       date: "",
-      time: "",
+      timeInit: "",
+      timeEnd: "",
       type: "",
       observations: "",
     };
@@ -215,8 +221,18 @@ export const CompanyMeetings: React.FC = () => {
       }
     }
 
-    if (!formData.time) {
-      newErrors.time = "La hora es obligatoria";
+    if (!formData.timeInit) {
+      newErrors.timeInit = "La hora es obligatoria";
+      isValid = false;
+    }
+
+    if (!formData.timeEnd) {
+      newErrors.timeEnd = "La hora es obligatoria";
+      isValid = false;
+    }
+
+    if (formData.timeEnd < formData.timeInit) {
+      newErrors.timeEnd = "Debe colocar una hora mayor a la inicial.";
       isValid = false;
     }
 
@@ -229,8 +245,24 @@ export const CompanyMeetings: React.FC = () => {
     return isValid;
   };
 
+  function hasConflict(newMeeting: Meeting, meetings: Meeting[]): boolean {
+    const newStart = new Date(newMeeting.dateInit).getTime();
+    const newEnd = new Date(newMeeting.dateEnd).getTime();
+
+    return meetings.some((m) => {
+      // Asegura que los IDs sean comparables (números o strings)
+      if (String(m.graduateId) !== String(newMeeting.graduateId)) return false;
+
+      const existingStart = new Date(m.dateInit).getTime();
+      const existingEnd = new Date(m.dateEnd).getTime();
+
+      return newStart < existingEnd && newEnd > existingStart;
+    });
+  }
+
   // Handle form submission
   const handleSubmit = async () => {
+    setIsLoading(true);
     if (validateForm()) {
       // Get graduate name
       const graduate = egresados.find((g) => g.id == formData.graduateId);
@@ -240,6 +272,7 @@ export const CompanyMeetings: React.FC = () => {
           ...errors,
           graduateId: "Egresado no encontrado",
         });
+        setIsLoading(false);
         return;
       }
 
@@ -248,13 +281,24 @@ export const CompanyMeetings: React.FC = () => {
         id: (meetings.length + 1).toString(),
         graduateName: graduate.name,
         graduateId: formData.graduateId,
-        date: `${formData.date}T${formData.time}:00`,
+        dateInit: `${formData.date}T${formData.timeInit}:00`,
+        dateEnd: `${formData.date}T${formData.timeEnd}:00`,
         type:
           meetingTypes.find((t) => t.value === formData.type)?.label ||
           formData.type,
         status: "scheduled",
         observations: formData.observations,
       };
+
+      if (hasConflict(addMetting, meetings)) {
+        setErrors({
+          ...errors,
+          timeInit: "Por favor elegir otro horario.",
+          timeEnd: "Por favor elegir otro horario.",
+        });
+        setIsLoading(false);
+        return;
+      }
 
       const { id, ...newMeeting } = addMetting;
 
@@ -269,17 +313,21 @@ export const CompanyMeetings: React.FC = () => {
           ...errors,
           graduateId: "Error al crear la reunión",
         });
+        setIsLoading(false);
         return;
       }
 
       setMeetings([addMetting, ...meetings]);
+      setReload(!reload);
       setIsScheduleModalOpen(false);
+      setIsLoading(false);
 
       // Reset form
       setFormData({
         graduateId: "",
         date: "",
-        time: "",
+        timeInit: "",
+        timeEnd: "",
         type: "",
         observations: "",
       });
@@ -489,7 +537,7 @@ export const CompanyMeetings: React.FC = () => {
                     </div>
                     <p className="text-default-600 flex items-center gap-1 mb-1">
                       <Icon icon="lucide:calendar" width={16} height={16} />
-                      {formatDate(meeting.date)}
+                      {formatDate(meeting.dateInit)}
                     </p>
                     {meeting.observations && (
                       <p className="text-small text-default-500 line-clamp-1">
@@ -603,7 +651,8 @@ export const CompanyMeetings: React.FC = () => {
                         </p>
                         <p className="font-medium flex items-center gap-2">
                           <Icon icon="lucide:calendar" width={16} height={16} />
-                          {formatDate(selectedMeeting.date)}
+                          {formatDate(selectedMeeting.dateInit)} -{" "}
+                          {formatDate(selectedMeeting.dateEnd).split(", ")[1]}
                         </p>
                       </div>
 
@@ -702,26 +751,35 @@ export const CompanyMeetings: React.FC = () => {
                       </SelectItem>
                     ))}
                   </Select>
+                  <Input
+                    type="date"
+                    label="Fecha"
+                    value={formData.date}
+                    onValueChange={(value) => handleChange("date", value)}
+                    isInvalid={!!errors.date}
+                    errorMessage={errors.date}
+                    isRequired
+                    min={new Date().toISOString().split("T")[0]}
+                  />
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Input
-                      type="date"
-                      label="Fecha"
-                      value={formData.date}
-                      onValueChange={(value) => handleChange("date", value)}
-                      isInvalid={!!errors.date}
-                      errorMessage={errors.date}
+                      type="time"
+                      label="Hora Inicio"
+                      value={formData.timeInit}
+                      onValueChange={(value) => handleChange("timeInit", value)}
+                      isInvalid={!!errors.timeInit}
+                      errorMessage={errors.timeInit}
                       isRequired
-                      min={new Date().toISOString().split("T")[0]}
                     />
 
                     <Input
                       type="time"
-                      label="Hora"
-                      value={formData.time}
-                      onValueChange={(value) => handleChange("time", value)}
-                      isInvalid={!!errors.time}
-                      errorMessage={errors.time}
+                      label="Hora Fin"
+                      value={formData.timeEnd}
+                      onValueChange={(value) => handleChange("timeEnd", value)}
+                      isInvalid={!!errors.timeEnd}
+                      errorMessage={errors.timeEnd}
                       isRequired
                     />
                   </div>
@@ -755,7 +813,11 @@ export const CompanyMeetings: React.FC = () => {
                 <Button color="default" variant="light" onPress={onClose}>
                   Cancelar
                 </Button>
-                <Button color="primary" onPress={handleSubmit}>
+                <Button
+                  color="primary"
+                  onPress={handleSubmit}
+                  isLoading={isLoading}
+                >
                   Programar Reunión
                 </Button>
               </ModalFooter>
@@ -783,7 +845,7 @@ export const CompanyMeetings: React.FC = () => {
                     <strong>{selectedMeeting.graduateName}</strong>?
                   </p>
                   <p className="text-small text-default-500 mt-2">
-                    Fecha: {formatDate(selectedMeeting.date)}
+                    Fecha: {formatDate(selectedMeeting.dateInit)}
                   </p>
                   <p className="text-small text-danger mt-4">
                     <Icon
