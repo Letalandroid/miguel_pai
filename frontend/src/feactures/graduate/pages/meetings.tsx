@@ -22,6 +22,7 @@ import { motion } from "framer-motion";
 import { addToast } from "@heroui/react";
 import { supabase } from "../../../supabase/client";
 import { useAuth } from "../../login/auth-context";
+import { MeetingSend, sendNotification } from "../../../utils/sendNotification";
 
 // Meeting type definition
 interface Meeting {
@@ -217,8 +218,29 @@ export const GraduateMeetings: React.FC = () => {
         return;
       }
 
+      const cEmail = companies.find((c) => {
+        return c.id == formData.companyId;
+      });
+
+      const cAdmin = companies
+        .filter((a) => a.role === "admin")
+        .map((a) => a.email);
+
+      const meet: MeetingSend = {
+        type: formData.type,
+        comanyName: cEmail.companyName,
+        graduateName: newMeeting.graduateName,
+        dateInit: newMeeting.dateInit,
+        dateEnd: newMeeting.dateEnd,
+        emails: [cEmail?.email ?? "", user?.email ?? "", ...(cAdmin ?? "")],
+        status: "scheduled",
+      };
+
+      await sendNotification(meet);
+
       setMeetings([newMeeting, ...meetings]);
       setIsScheduleModalOpen(false);
+      setIsLoading(false);
 
       // Resetear formulario
       setFormData({
@@ -239,39 +261,58 @@ export const GraduateMeetings: React.FC = () => {
   };
 
   // Cancel meeting
-  const cancelMeeting = async () => {
-    if (selectedMeeting) {
-      const { error } = await supabase
-        .from("meetings")
-        .update({ status: "cancelled" })
-        .eq("id", selectedMeeting.id);
+  const cancelMeeting = async (meeting: Meeting) => {
+    // Update local state
+    const updatedMeetings = meetings.map((m) =>
+      m.id === meeting.id ? { ...m, status: "cancelled" as const } : m
+    );
 
-      if (error) {
-        console.error(error);
-        addToast({
-          title: "Error",
-          description: "No se pudo cancelar la reunión",
-          color: "danger",
-        });
-        return;
-      }
+    const { error } = await supabase
+      .from("meetings")
+      .update({ status: "cancelled" })
+      .eq("id", meeting.id);
+    console.log(meeting);
 
-      // Update local state
-      const updatedMeetings = meetings.map((m) =>
-        m.id === selectedMeeting.id ? { ...m, status: "cancelled" as const } : m
-      );
-
-      setMeetings(updatedMeetings);
-      setIsScheduleModalOpen(false);
-      setIsDetailsModalOpen(false);
-
-      // Show success message
+    if (error) {
+      console.error(error);
       addToast({
-        title: "Reunión cancelada",
-        description: `La reunión con ${selectedMeeting.graduateName} ha sido cancelada`,
-        color: "success",
+        title: "Error",
+        description: "No se pudo cancelar la reunión",
+        color: "danger",
       });
+      return;
     }
+
+    const cEmail = companies.find((c) => {
+      return c.id == meeting.companyId;
+    });
+
+    const cAdmin = companies.filter((a) => {
+      if (a.role === "admin") return a.email;
+    });
+
+    const meet: MeetingSend = {
+      type: formData.type,
+      comanyName: cEmail.companyName,
+      graduateName: meeting.graduateName,
+      dateInit: meeting.dateInit,
+      dateEnd: meeting.dateEnd,
+      emails: [cEmail?.email ?? "", user?.email ?? "", ...(cAdmin ?? "")],
+      status: "cancelled",
+    };
+
+    await sendNotification(meet);
+
+    setMeetings(updatedMeetings);
+    setIsScheduleModalOpen(false);
+    setIsDetailsModalOpen(false);
+
+    // Show success message
+    addToast({
+      title: "Reunión cancelada",
+      description: `La reunión con ${meeting.graduateName} ha sido cancelada`,
+      color: "success",
+    });
   };
 
   // Formatear fecha
@@ -423,7 +464,7 @@ export const GraduateMeetings: React.FC = () => {
                       size="sm"
                       color="danger"
                       variant="light"
-                      onPress={() => cancelMeeting()}
+                      onPress={() => cancelMeeting(meeting)}
                     >
                       Cancelar
                     </Button>
