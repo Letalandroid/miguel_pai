@@ -21,6 +21,8 @@ import { Icon } from "@iconify/react";
 import { motion } from "framer-motion";
 import { addToast } from "@heroui/react";
 import { supabase } from "../../../supabase/client";
+import { MeetingSend, sendNotification } from "../../../utils/sendNotification";
+import { useAuth } from "../../login/auth-context";
 
 // Meeting type definition
 interface Meeting {
@@ -61,6 +63,7 @@ export const AdminMeetings: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
+  const { user } = useAuth();
 
   // Form state
   const [formData, setFormData] = React.useState({
@@ -429,6 +432,21 @@ export const AdminMeetings: React.FC = () => {
       const { error } = await supabase
         .from("meetings")
         .insert([{ observations: notes, ...meetingData }]);
+
+      const meet: MeetingSend = {
+        type: formData.type,
+        comanyName: formData.companyName,
+        graduateName: formData.graduateName,
+        dateInit: newMeeting.dateInit,
+        dateEnd: newMeeting.dateEnd,
+        emails: [
+          formData.companyEmail ?? "",
+          formData.graduateEmail ?? "",
+          user.email ?? "",
+        ],
+      };
+
+      await sendNotification(meet);
 
       if (error) {
         console.error(error);
