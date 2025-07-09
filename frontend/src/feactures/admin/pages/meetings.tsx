@@ -46,6 +46,7 @@ export const AdminMeetings: React.FC = () => {
   const [companies, setCompanies] = React.useState([]);
   const [egresados, setEgresados] = React.useState([]);
   const [reload, setReload] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [typeFilter, setTypeFilter] = React.useState<
     "all" | "entrevista" | "orientacion" | "seguimiento" | "otro"
@@ -155,31 +156,38 @@ export const AdminMeetings: React.FC = () => {
     const matchesStatus =
       statusFilter === "all" || meeting.status === statusFilter;
 
-    const {
-      id: companyId,
-      name: companyName,
-      email: companyEmail,
-    } = companies.find((c) => {
-      return c.id == meeting.companyId;
-    });
+    try {
+      const {
+        id: companyId,
+        name: companyName,
+        email: companyEmail,
+      } = companies.find((c) => {
+        return c.id == meeting.companyId;
+      });
+      // Set company data
+      meeting.companyId = companyId;
+      meeting.companyName = companyName;
+      meeting.companyEmail = companyEmail;
+    } catch (error) {
+      console.error(error);
+    }
 
-    const {
-      id: graduateId,
-      name: graduateName,
-      email: graduateEmail,
-    } = egresados.find((e) => {
-      return e.id == meeting.graduateId;
-    });
+    try {
+      const {
+        id: graduateId,
+        name: graduateName,
+        email: graduateEmail,
+      } = egresados.find((e) => {
+        return e.id == meeting.graduateId;
+      });
 
-    // Set company data
-    meeting.companyId = companyId;
-    meeting.companyName = companyName;
-    meeting.companyEmail = companyEmail;
-
-    // Set graduate data
-    meeting.graduateId = graduateId;
-    meeting.graduateName = graduateName;
-    meeting.graduateEmail = graduateEmail;
+      // Set graduate data
+      meeting.graduateId = graduateId;
+      meeting.graduateName = graduateName;
+      meeting.graduateEmail = graduateEmail;
+    } catch (error) {
+      console.error(error);
+    }
 
     return matchesSearch && matchesType && matchesStatus;
   });
@@ -305,36 +313,36 @@ export const AdminMeetings: React.FC = () => {
 
     let isValid = true;
 
-    if (!formData.graduateName.trim()) {
-      newErrors.graduateName = "El nombre del egresado es obligatorio";
-      isValid = false;
-    }
+    // if (!formData.graduateName.trim()) {
+    //   newErrors.graduateName = "El nombre del egresado es obligatorio";
+    //   isValid = false;
+    // }
 
-    if (!formData.graduateEmail.trim()) {
-      newErrors.graduateEmail = "El correo del egresado es obligatorio";
-      isValid = false;
-    } else if (!/\S+@\S+\.\S+/.test(formData.graduateEmail)) {
-      newErrors.graduateEmail = "Ingrese un correo electrónico válido";
-      isValid = false;
-    }
+    // if (!formData.graduateEmail.trim()) {
+    //   newErrors.graduateEmail = "El correo del egresado es obligatorio";
+    //   isValid = false;
+    // } else if (!/\S+@\S+\.\S+/.test(formData.graduateEmail)) {
+    //   newErrors.graduateEmail = "Ingrese un correo electrónico válido";
+    //   isValid = false;
+    // }
 
-    if (!formData.companyName.trim()) {
-      newErrors.companyName = "El nombre de la empresa es obligatorio";
-      isValid = false;
-    }
+    // if (!formData.companyName.trim()) {
+    //   newErrors.companyName = "El nombre de la empresa es obligatorio";
+    //   isValid = false;
+    // }
 
-    if (!formData.companyEmail.trim()) {
-      newErrors.companyEmail = "El correo de la empresa es obligatorio";
-      isValid = false;
-    } else if (!/\S+@\S+\.\S+/.test(formData.companyEmail)) {
-      newErrors.companyEmail = "Ingrese un correo electrónico válido";
-      isValid = false;
-    }
+    // if (!formData.companyEmail.trim()) {
+    //   newErrors.companyEmail = "El correo de la empresa es obligatorio";
+    //   isValid = false;
+    // } else if (!/\S+@\S+\.\S+/.test(formData.companyEmail)) {
+    //   newErrors.companyEmail = "Ingrese un correo electrónico válido";
+    //   isValid = false;
+    // }
 
-    if (!formData.graduateId) {
-      newErrors.graduateId = "El egresado es obligatorio";
-      isValid = false;
-    }
+    // if (!formData.graduateId) {
+    //   newErrors.graduateId = "El egresado es obligatorio";
+    //   isValid = false;
+    // }
 
     if (!formData.companyId) {
       newErrors.companyId = "La compañia es obligatoria";
@@ -369,23 +377,27 @@ export const AdminMeetings: React.FC = () => {
       isValid = false;
     }
 
-    if (!formData.location.trim()) {
-      newErrors.location = "La ubicación es obligatoria";
-      isValid = false;
-    }
+    // if (!formData.location.trim()) {
+    //   newErrors.location = "La ubicación es obligatoria";
+    //   isValid = false;
+    // }
 
+    console.log(newErrors);
     setErrors(newErrors);
     return isValid;
   };
 
   // Handle form submission for adding a new meeting
-  const handleAddMeeting = () => {
+  const handleAddMeeting = async () => {
     if (validateForm()) {
+      setLoading(true);
       // Create new meeting
       const newMeeting: Meeting = {
         id: (meetings.length + 1).toString(),
+        graduateId: parseInt(formData.graduateName),
         graduateName: formData.graduateName,
         graduateEmail: formData.graduateEmail,
+        companyId: formData.companyId,
         companyName: formData.companyName,
         companyEmail: formData.companyEmail,
         dateInit: `${formData.date}T${formData.time}`,
@@ -402,8 +414,31 @@ export const AdminMeetings: React.FC = () => {
         createdBy: "admin",
       };
 
+      const {
+        id,
+        notes,
+        companyEmail,
+        companyName,
+        createdBy,
+        endTime,
+        graduateEmail,
+        location,
+        ...meetingData
+      } = newMeeting;
+
+      const { error } = await supabase
+        .from("meetings")
+        .insert([{ observations: notes, ...meetingData }]);
+
+      if (error) {
+        console.error(error);
+        setLoading(false);
+        return;
+      }
+
       setMeetings([...meetings, newMeeting]);
       setIsAddModalOpen(false);
+      setLoading(false);
 
       // Reset form
       setFormData({
@@ -837,16 +872,22 @@ export const AdminMeetings: React.FC = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
                     <div className="space-y-3">
-                      <div>
-                        <h4 className="text-md font-semibold mb-1">Egresado</h4>
-                        <p className="text-default-700">
-                          {selectedMeeting.graduateName}
-                        </p>
-                        <p className="text-default-600 flex items-center gap-1">
-                          <Icon icon="lucide:mail" width={14} height={14} />
-                          {selectedMeeting.graduateEmail}
-                        </p>
-                      </div>
+                      {selectedMeeting.graduateId ? (
+                        <div>
+                          <h4 className="text-md font-semibold mb-1">
+                            Egresado
+                          </h4>
+                          <p className="text-default-700">
+                            {selectedMeeting.graduateName}
+                          </p>
+                          <p className="text-default-600 flex items-center gap-1">
+                            <Icon icon="lucide:mail" width={14} height={14} />
+                            {selectedMeeting.graduateEmail}
+                          </p>
+                        </div>
+                      ) : (
+                        ""
+                      )}
 
                       <div>
                         <h4 className="text-md font-semibold mb-1">
@@ -875,16 +916,22 @@ export const AdminMeetings: React.FC = () => {
                     </div>
 
                     <div className="space-y-3">
-                      <div>
-                        <h4 className="text-md font-semibold mb-1">Empresa</h4>
-                        <p className="text-default-700">
-                          {selectedMeeting.companyName}
-                        </p>
-                        <p className="text-default-600 flex items-center gap-1">
-                          <Icon icon="lucide:mail" width={14} height={14} />
-                          {selectedMeeting.companyEmail}
-                        </p>
-                      </div>
+                      {selectedMeeting.companyId ? (
+                        <div>
+                          <h4 className="text-md font-semibold mb-1">
+                            Empresa
+                          </h4>
+                          <p className="text-default-700">
+                            {selectedMeeting.companyName}
+                          </p>
+                          <p className="text-default-600 flex items-center gap-1">
+                            <Icon icon="lucide:mail" width={14} height={14} />
+                            {selectedMeeting.companyEmail}
+                          </p>
+                        </div>
+                      ) : (
+                        ""
+                      )}
 
                       {/* <div>
                         <h4 className="text-md font-semibold mb-1">
@@ -1065,7 +1112,11 @@ export const AdminMeetings: React.FC = () => {
                 <Button color="default" variant="light" onPress={onClose}>
                   Cancelar
                 </Button>
-                <Button color="primary" onPress={handleAddMeeting}>
+                <Button
+                  color="primary"
+                  onPress={handleAddMeeting}
+                  isLoading={loading}
+                >
                   Programar Reunión
                 </Button>
               </ModalFooter>
