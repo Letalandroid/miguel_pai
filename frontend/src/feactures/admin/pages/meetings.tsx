@@ -21,6 +21,8 @@ import { Icon } from "@iconify/react";
 import { motion } from "framer-motion";
 import { addToast } from "@heroui/react";
 import { supabase } from "../../../supabase/client";
+import { MeetingSend, sendNotification } from "../../../utils/sendNotification";
+import { useAuth } from "../../login/auth-context";
 
 // Meeting type definition
 interface Meeting {
@@ -61,6 +63,7 @@ export const AdminMeetings: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
+  const { user } = useAuth();
 
   // Form state
   const [formData, setFormData] = React.useState({
@@ -157,34 +160,44 @@ export const AdminMeetings: React.FC = () => {
       statusFilter === "all" || meeting.status === statusFilter;
 
     try {
-      const {
-        id: companyId,
-        name: companyName,
-        email: companyEmail,
-      } = companies.find((c) => {
+      const empresa = companies.find((c) => {
         return c.id == meeting.companyId;
       });
-      // Set company data
-      meeting.companyId = companyId;
-      meeting.companyName = companyName;
-      meeting.companyEmail = companyEmail;
+
+      if (empresa) {
+        const {
+          id: companyId,
+          name: companyName,
+          email: companyEmail,
+        } = empresa;
+        // Set company data
+        meeting.companyId = companyId;
+        meeting.companyName = companyName;
+        meeting.companyEmail = companyEmail;
+      }
     } catch (error) {
       console.error(error);
     }
 
     try {
-      const {
-        id: graduateId,
-        name: graduateName,
-        email: graduateEmail,
-      } = egresados.find((e) => {
-        return e.id == meeting.graduateId;
+      const egresado = egresados.find((e) => {
+        if (e) {
+          return e.id == meeting.graduateId;
+        }
       });
 
-      // Set graduate data
-      meeting.graduateId = graduateId;
-      meeting.graduateName = graduateName;
-      meeting.graduateEmail = graduateEmail;
+      if (egresado) {
+        const {
+          id: graduateId,
+          name: graduateName,
+          email: graduateEmail,
+        } = egresado;
+
+        // Set graduate data
+        meeting.graduateId = graduateId;
+        meeting.graduateName = graduateName;
+        meeting.graduateEmail = graduateEmail;
+      }
     } catch (error) {
       console.error(error);
     }
@@ -387,6 +400,37 @@ export const AdminMeetings: React.FC = () => {
     return isValid;
   };
 
+  function hasConflict(newMeeting: Meeting, meetings: Meeting[]): boolean {
+    const newStart = new Date(newMeeting.dateInit).getTime();
+    const newEnd = new Date(newMeeting.dateEnd).getTime();
+    console.log(newStart, newEnd);
+
+    return meetings.some((m) => {
+      // Asegura que los IDs sean comparables (números o strings)
+      if (
+        m.graduateId != null &&
+        newMeeting.graduateId != null &&
+        String(m.graduateId) !== String(newMeeting.graduateId)
+      ) {
+        return false;
+      }
+
+      if (
+        m.companyId != null &&
+        newMeeting.companyId != null &&
+        String(m.companyId) !== String(newMeeting.companyId)
+      ) {
+        return false;
+      }
+
+      const existingStart = new Date(m.dateInit).getTime();
+      const existingEnd = new Date(m.dateEnd).getTime();
+      console.log(newStart, existingEnd, newEnd, existingStart);
+
+      return newStart < existingEnd && newEnd > existingStart;
+    });
+  }
+
   // Handle form submission for adding a new meeting
   const handleAddMeeting = async () => {
     if (validateForm()) {
@@ -413,6 +457,17 @@ export const AdminMeetings: React.FC = () => {
         notes: formData.notes,
         createdBy: "admin",
       };
+      console.log(newMeeting);
+
+      if (hasConflict(newMeeting, meetings)) {
+        setErrors({
+          ...errors,
+          time: "Por favor elegir otro horario.",
+          endTime: "Por favor elegir otro horario.",
+        });
+        setLoading(false);
+        return;
+      }
 
       const {
         id,
@@ -429,6 +484,25 @@ export const AdminMeetings: React.FC = () => {
       const { error } = await supabase
         .from("meetings")
         .insert([{ observations: notes, ...meetingData }]);
+
+      const cEmail = companies.find((c) => {
+        return c.id == formData.companyId;
+      });
+      const eEmail = egresados.find((e) => {
+        return e.id == formData.graduateId;
+      });
+
+      const meet: MeetingSend = {
+        type: formData.type,
+        comanyName: formData.companyName,
+        graduateName: formData.graduateName,
+        dateInit: newMeeting.dateInit,
+        dateEnd: newMeeting.dateEnd,
+        emails: [cEmail?.email ?? "", eEmail?.email ?? "", user?.email ?? ""],
+        status: "scheduled",
+      };
+
+      await sendNotification(meet);
 
       if (error) {
         console.error(error);
@@ -503,11 +577,46 @@ export const AdminMeetings: React.FC = () => {
   };
 
   // Delete meeting
-  const handleDeleteMeeting = () => {
+  const handleDeleteMeeting = async () => {
     if (selectedMeeting) {
       const updatedMeetings = meetings.filter(
         (meeting) => meeting.id !== selectedMeeting.id
       );
+
+      const { error } = await supabase
+        .from("meetings")
+        .delete()
+        .eq("id", selectedMeeting.id);
+
+      if (error) {
+        console.error(error);
+        addToast({
+          title: "Error",
+          description: "No se pudo completar la reunión",
+          color: "danger",
+        });
+        return;
+      }
+
+      const cEmail = companies.find((c) => {
+        return c.id == formData.companyId;
+      });
+      const eEmail = egresados.find((e) => {
+        return e.id == formData.graduateId;
+      });
+
+      const meet: MeetingSend = {
+        type: `ELIMINADO - ${formData.type}`,
+        comanyName: formData.companyName,
+        graduateName: formData.graduateName,
+        dateInit: selectedMeeting.dateInit,
+        dateEnd: selectedMeeting.dateEnd,
+        emails: [cEmail?.email ?? "", eEmail?.email ?? "", user?.email ?? ""],
+        status: "cancelled",
+      };
+
+      await sendNotification(meet);
+
       setMeetings(updatedMeetings);
       setIsDeleteModalOpen(false);
       setIsDetailsModalOpen(false);
@@ -530,6 +639,10 @@ export const AdminMeetings: React.FC = () => {
       meeting.id === meetingId ? { ...meeting, status: newStatus } : meeting
     );
 
+    const getMeet = meetings.find((m) => {
+      return m.id == meetingId;
+    });
+
     const { error } = await supabase
       .from("meetings")
       .update({ status: newStatus })
@@ -544,6 +657,25 @@ export const AdminMeetings: React.FC = () => {
       });
       return;
     }
+
+    const cEmail = companies.find((c) => {
+      return c.id == formData.companyId;
+    });
+    const eEmail = egresados.find((e) => {
+      return e.id == formData.graduateId;
+    });
+
+    const meet: MeetingSend = {
+      type: getMeet.type,
+      comanyName: getMeet.companyName,
+      graduateName: getMeet.graduateName,
+      dateInit: getMeet.dateInit,
+      dateEnd: getMeet.dateEnd,
+      emails: [cEmail?.email ?? "", eEmail?.email ?? "", user?.email ?? ""],
+      status: newStatus,
+    };
+
+    await sendNotification(meet);
 
     setMeetings(updatedMeetings);
 

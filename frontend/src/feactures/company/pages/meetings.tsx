@@ -276,8 +276,8 @@ export const CompanyMeetings: React.FC = () => {
 
   // Handle form submission
   const handleSubmit = async () => {
-    setIsLoading(true);
     if (validateForm()) {
+      setIsLoading(true);
       // Get graduate name
       const graduate = egresados.find((g) => g.id == formData.graduateId);
 
