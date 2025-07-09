@@ -1,5 +1,3 @@
-import { Resend } from "resend";
-
 export interface MeetingSend {
   emails: string[];
   graduateName: string;
@@ -7,14 +5,25 @@ export interface MeetingSend {
   type: string;
   dateInit: string;
   dateEnd: string;
+  status: "scheduled" | "completed" | "cancelled";
 }
 
 function generateMeetingHTML(meet: MeetingSend): string {
   return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
-        <h2 style="color: #07524B;">Nueva Reunión Agendada</h2>
+        <h2 style="color: #07524B;">${
+          meet.status === "scheduled"
+            ? "Nueva Reunión Agendada"
+            : meet.status === "completed"
+            ? "Reunión Completada"
+            : meet.status === "cancelled"
+            ? "Reunión Cancelada"
+            : "Not defined"
+        }</h2>
         <p>Estimado/a <strong>${meet.graduateName}</strong>,</p>
-        <p>Le informamos que ha sido agendada una reunión con la empresa <strong>${meet.comanyName}</strong>.</p>
+        <p>Le informamos que ha sido agendada una reunión con la empresa <strong>${
+          meet.comanyName
+        }</strong>.</p>
 
         <table style="width: 100%; margin-top: 20px; border-collapse: collapse;">
           <tr>
@@ -23,11 +32,15 @@ function generateMeetingHTML(meet: MeetingSend): string {
           </tr>
           <tr>
             <td style="padding: 8px; border: 1px solid #ccc;"><strong>Inicio:</strong></td>
-            <td style="padding: 8px; border: 1px solid #ccc;">${meet.dateInit}</td>
+            <td style="padding: 8px; border: 1px solid #ccc;">${
+              meet.dateInit
+            }</td>
           </tr>
           <tr>
             <td style="padding: 8px; border: 1px solid #ccc;"><strong>Fin:</strong></td>
-            <td style="padding: 8px; border: 1px solid #ccc;">${meet.dateEnd}</td>
+            <td style="padding: 8px; border: 1px solid #ccc;">${
+              meet.dateEnd
+            }</td>
           </tr>
         </table>
 

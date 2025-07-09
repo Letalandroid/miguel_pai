@@ -433,17 +433,21 @@ export const AdminMeetings: React.FC = () => {
         .from("meetings")
         .insert([{ observations: notes, ...meetingData }]);
 
+      const cEmail = companies.find((c) => {
+        return c.id == formData.companyId;
+      });
+      const eEmail = egresados.find((e) => {
+        return e.id == formData.graduateId;
+      });
+
       const meet: MeetingSend = {
         type: formData.type,
         comanyName: formData.companyName,
         graduateName: formData.graduateName,
         dateInit: newMeeting.dateInit,
         dateEnd: newMeeting.dateEnd,
-        emails: [
-          formData.companyEmail ?? "",
-          formData.graduateEmail ?? "",
-          user.email ?? "",
-        ],
+        emails: [cEmail?.email ?? "", eEmail?.email ?? "", user?.email ?? ""],
+        status: "scheduled",
       };
 
       await sendNotification(meet);
@@ -548,6 +552,8 @@ export const AdminMeetings: React.FC = () => {
       meeting.id === meetingId ? { ...meeting, status: newStatus } : meeting
     );
 
+    const getMeet = meetings.find((m) => { return m.id == meetingId});
+
     const { error } = await supabase
       .from("meetings")
       .update({ status: newStatus })
@@ -562,6 +568,25 @@ export const AdminMeetings: React.FC = () => {
       });
       return;
     }
+
+    const cEmail = companies.find((c) => {
+      return c.id == formData.companyId;
+    });
+    const eEmail = egresados.find((e) => {
+      return e.id == formData.graduateId;
+    });
+
+    const meet: MeetingSend = {
+      type: getMeet.type,
+      comanyName: getMeet.companyName,
+      graduateName: getMeet.graduateName,
+      dateInit: getMeet.dateInit,
+      dateEnd: getMeet.dateEnd,
+      emails: [cEmail?.email ?? "", eEmail?.email ?? "", user?.email ?? ""],
+      status: newStatus,
+    };
+
+    await sendNotification(meet);
 
     setMeetings(updatedMeetings);
 
