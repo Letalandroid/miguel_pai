@@ -475,7 +475,7 @@ export const CompanyMeetings: React.FC = () => {
     });
 
     const cEmail = companies.find((c) => {
-      return c.id == user.id;
+      return c.id == meeting.companyId;
     });
 
     const cAdmin = companies
