@@ -1251,7 +1251,7 @@ export const AdminWorkshops: React.FC = () => {
                       </span>{" "}
                       participantes
                     </p>
-                    <Button
+                    {/* <Button
                       size="sm"
                       color="primary"
                       variant="flat"
@@ -1260,7 +1260,7 @@ export const AdminWorkshops: React.FC = () => {
                       }
                     >
                       Agregar Participante
-                    </Button>
+                    </Button> */}
                   </div>
 
                   {getParticipantsByWorkshop(parseInt(selectedWorkshop.id)).length > 0 ? (
