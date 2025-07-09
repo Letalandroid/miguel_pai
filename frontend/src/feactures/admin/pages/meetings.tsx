@@ -23,6 +23,7 @@ import { addToast } from "@heroui/react";
 import { supabase } from "../../../supabase/client";
 import { MeetingSend, sendNotification } from "../../../utils/sendNotification";
 import { useAuth } from "../../login/auth-context";
+import * as XLSX from "xlsx";
 
 // Meeting type definition
 interface Meeting {
@@ -431,6 +432,56 @@ export const AdminMeetings: React.FC = () => {
     });
   }
 
+  const exportToExcel = () => {
+    const meets = meetings.filter((m) => {
+      return m.status === "completed";
+    });
+
+    if (!meets || meets.length === 0) {
+      addToast({
+        title: "No hay reuniones para exportar",
+        description: `-`,
+        color: "danger",
+      });
+      return;
+    }
+
+    const excelData = meets.map((meet) => ({
+      ID: meet.id,
+      "Nombre Egresado": meet.graduateName,
+      "ID Empresa": meet.companyId,
+      "ID Egresado": meet.graduateId,
+      Tipo: meet.type,
+      Estado: meet.status,
+      Observaciones: meet.notes,
+      "Fecha de inicio": meet.dateInit,
+      "Fecha de fin": meet.dateEnd,
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(excelData);
+
+    // Ajustar anchos de columnas
+    ws["!cols"] = [
+      { wch: 8 },
+      { wch: 30 },
+      { wch: 20 },
+      { wch: 20 },
+      { wch: 20 },
+      { wch: 12 },
+      { wch: 12 },
+      { wch: 15 },
+      { wch: 15 },
+    ];
+
+    // Crear libro y exportar
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Productos");
+    XLSX.writeFile(
+      wb,
+      `reuniones_${new Date().toISOString().split("T")[0]}.xlsx`
+    );
+  };
+
   // Handle form submission for adding a new meeting
   const handleAddMeeting = async () => {
     if (validateForm()) {
@@ -774,13 +825,26 @@ export const AdminMeetings: React.FC = () => {
               Administra las reuniones entre egresados y empresas
             </p>
           </div>
-          <Button
-            color="primary"
-            startContent={<Icon icon="lucide:plus" width={18} height={18} />}
-            onPress={() => setIsAddModalOpen(true)}
-          >
-            Programar Reunión
-          </Button>
+          <div className="flex gap-3">
+            <Button
+              color="success"
+              startContent={
+                <Icon icon="lucide:calendar-plus" width={18} height={18} />
+              }
+              onPress={() => exportToExcel()}
+            >
+              Exportar a excel
+            </Button>
+            <Button
+              color="primary"
+              startContent={
+                <Icon icon="lucide:calendar-plus" width={18} height={18} />
+              }
+              onPress={() => setIsAddModalOpen(true)}
+            >
+              Programar Reunión
+            </Button>
+          </div>
         </div>
       </motion.div>
 
