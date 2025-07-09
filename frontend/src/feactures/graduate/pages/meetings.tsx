@@ -179,8 +179,8 @@ export const GraduateMeetings: React.FC = () => {
 
   // Manejar envío del formulario
   const handleSubmit = async () => {
-    setIsLoading(true);
     if (validateForm()) {
+      setIsLoading(true);
       const { name: companyName } = companies.find((c) => {
         return c.id === formData.companyId;
       });

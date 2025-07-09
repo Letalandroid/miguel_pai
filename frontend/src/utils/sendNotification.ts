@@ -61,7 +61,7 @@ export const sendNotification = async (meet: MeetingSend) => {
     },
     body: JSON.stringify({
       emails: meet.emails,
-      subject: meet.type,
+      subject: `${meet.type.toUpperCase()} - ${meet.status.toUpperCase()}`,
       html: htmlContent,
     }),
   });
