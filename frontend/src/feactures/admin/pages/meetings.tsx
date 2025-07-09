@@ -522,13 +522,28 @@ export const AdminMeetings: React.FC = () => {
   };
 
   // Change meeting status
-  const handleChangeStatus = (
+  const handleChangeStatus = async (
     meetingId: string,
     newStatus: "scheduled" | "completed" | "cancelled"
   ) => {
     const updatedMeetings = meetings.map((meeting) =>
       meeting.id === meetingId ? { ...meeting, status: newStatus } : meeting
     );
+
+    const { error } = await supabase
+      .from("meetings")
+      .update({ status: newStatus })
+      .eq("id", meetingId);
+
+    if (error) {
+      console.error(error);
+      addToast({
+        title: "Error",
+        description: "No se pudo cancelar la reunión",
+        color: "danger",
+      });
+      return;
+    }
 
     setMeetings(updatedMeetings);
 
