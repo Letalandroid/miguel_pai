@@ -110,7 +110,7 @@ export const AdminGraduates: React.FC = () => {
     };
 
     getGraduados();
-  }, []);
+  }, [excelModalOpen]);
 
   useEffect(() => {
     const getCompanies = async () => {
@@ -440,18 +440,44 @@ export const AdminGraduates: React.FC = () => {
   const handleImportExcel = () => {
     try {
       // Mapear los datos del excel a Graduate
-      const newGraduates: Graduate[] = excelData.map((row: any, idx) => ({
+      const addGraduate: Graduate[] = excelData.map((row: any, idx) => ({
         id: (graduates.length + idx + 1).toString(),
-        name: row["Nombre"] || row["name"] || "",
-        email: row["Correo"] || row["email"] || "",
-        phone: row["Teléfono"] || row["phone"] || "",
-        career: row["Carrera"] || row["career"] || "",
-        role: row["Role"] || row["role"] || "",
-        graduationYear: row["Año de Egreso"] || row["graduationYear"] || "",
+        name:
+          row["Nombre  Apellido"].replace("  ", " ") ||
+          row["Nombre Apellido"].replace("  ", " ") ||
+          row["NOMBRES"].replace("  ", " ") ||
+          "",
+        email:
+          row["Email"].replace(" ", "") || row["email"].replace(" ", "") || "",
+        phone: row["Teléfono"] || row["phone"] || row["Numero_documento"] || "",
+        career:
+          row["Carrera"].toLowerCase() ||
+          row["career"].toLowerCase() ||
+          row["ProgramaDetalle"].toLowerCase() ||
+          "",
+        role: row["Role"] || row["role"] || "graduate",
+        graduationYear: row["Anio_egreso"] || row["graduationYear"] || "",
         status: "active",
       }));
 
-      setGraduates([...graduates, ...newGraduates]);
+      addGraduate.forEach(async (g) => {
+        const { id, ...newGraduate } = g;
+
+        const { error } = await supabase.from("egresados").insert(newGraduate);
+
+        if (error) {
+          console.error("Error al registrar egresado:", error.message);
+
+          addToast({
+            title: "Error",
+            description: "No se pudo registrar al egresado",
+            color: "danger",
+          });
+          return;
+        }
+      });
+
+      setGraduates([...graduates, ...addGraduate]);
       setExcelModalOpen(false);
       setExcelData([]);
 
@@ -462,7 +488,7 @@ export const AdminGraduates: React.FC = () => {
 
       addToast({
         title: "Importación exitosa",
-        description: `Se importaron ${newGraduates.length} egresados correctamente.`,
+        description: `Se importaron ${addGraduate.length} egresados correctamente.`,
         color: "success",
       });
     } catch (error) {
