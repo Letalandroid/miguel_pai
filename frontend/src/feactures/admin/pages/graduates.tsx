@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Card,
   CardBody,
@@ -51,6 +51,7 @@ export const AdminGraduates: React.FC = () => {
   const [graduates, setGraduates] = React.useState<Graduate[]>([]);
   const [companies, setCompanies] = React.useState<Company[]>([]);
   const [searchTerm, setSearchTerm] = React.useState("");
+  const [reload, setReload] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
   const [isAddModalCompanyOpen, setIsAddModalCompanyOpen] =
     React.useState(false);
@@ -110,7 +111,7 @@ export const AdminGraduates: React.FC = () => {
     };
 
     getGraduados();
-  }, [excelModalOpen]);
+  }, [excelModalOpen, reload]);
 
   useEffect(() => {
     const getCompanies = async () => {
@@ -127,7 +128,7 @@ export const AdminGraduates: React.FC = () => {
     };
 
     getCompanies();
-  }, []);
+  }, [reload]);
 
   // Filtro de búsqueda
   const filteredGraduates = graduates.filter(
@@ -383,6 +384,35 @@ export const AdminGraduates: React.FC = () => {
     setIsEditModalOpen(true);
   };
 
+  const deleteUser = async (user = "") => {
+    const uId = parseInt(user.split("_")[0]);
+    const role = user.split("_")[1];
+
+    const { error } = await supabase
+      .from(role === "company" ? "empresas" : "egresados")
+      .delete()
+      .eq("id", uId);
+
+    setReload(!reload);
+
+    if (error) {
+      console.error("Error al registrar egresado:", error.message);
+
+      addToast({
+        title: "Error",
+        description: "No se pudo registrar al egresado",
+        color: "danger",
+      });
+      return;
+    }
+
+    addToast({
+      title: "Usuario eliminado",
+      description: "El usuario ha sido eliminado satisfactoriamente.",
+      color: "success",
+    });
+  };
+
   // Manejar archivo Excel
   const handleExcelFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -633,9 +663,19 @@ export const AdminGraduates: React.FC = () => {
                       size="sm"
                       color="primary"
                       variant="flat"
-                      // onPress={() => editGraduate()}
+                      // onPress={() => editGraduate(company)}
                     >
                       Editar
+                    </Button>
+                    <Button
+                      size="sm"
+                      color="danger"
+                      variant="flat"
+                      onPress={() =>
+                        deleteUser(`${company.id}_${company.role}`)
+                      }
+                    >
+                      Eliminar
                     </Button>
                   </div>
                 </div>
@@ -698,6 +738,16 @@ export const AdminGraduates: React.FC = () => {
                       onPress={() => editGraduate(graduate)}
                     >
                       Editar
+                    </Button>
+                    <Button
+                      size="sm"
+                      color="danger"
+                      variant="flat"
+                      onPress={() =>
+                        deleteUser(`${graduate.id}_${graduate.role}`)
+                      }
+                    >
+                      Eliminar
                     </Button>
                   </div>
                 </div>
