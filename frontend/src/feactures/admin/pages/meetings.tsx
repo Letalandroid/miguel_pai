@@ -33,14 +33,14 @@ interface Meeting {
   graduateEmail: string;
   companyName: string;
   companyEmail: string;
-  companyId?: number;
+  companyId?: string;
   dateInit: string;
   dateEnd: string;
   endTime: string;
   type: "entrevista" | "orientacion" | "seguimiento" | "otro";
   status: "scheduled" | "completed" | "cancelled";
   location: string;
-  notes: string;
+  observations: string;
   createdBy: "graduate" | "company" | "admin";
 }
 
@@ -71,7 +71,7 @@ export const AdminMeetings: React.FC = () => {
     graduateId: 0,
     graduateName: "",
     graduateEmail: "",
-    companyId: 0,
+    companyId: "",
     companyName: "",
     companyEmail: "",
     date: "",
@@ -79,7 +79,7 @@ export const AdminMeetings: React.FC = () => {
     endTime: "",
     type: "",
     location: "",
-    notes: "",
+    observations: "",
   });
 
   // Form errors
@@ -95,7 +95,7 @@ export const AdminMeetings: React.FC = () => {
     endTime: "",
     type: "",
     location: "",
-    notes: "",
+    observations: "",
   });
 
   useEffect(() => {
@@ -154,7 +154,7 @@ export const AdminMeetings: React.FC = () => {
     const matchesSearch =
       meeting.graduateName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       meeting.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      meeting.notes.toLowerCase().includes(searchTerm.toLowerCase());
+      meeting.observations.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesType = typeFilter === "all" || meeting.type === typeFilter;
     const matchesStatus =
@@ -322,7 +322,7 @@ export const AdminMeetings: React.FC = () => {
       endTime: "",
       type: "",
       location: "",
-      notes: "",
+      observations: "",
     };
 
     let isValid = true;
@@ -453,7 +453,7 @@ export const AdminMeetings: React.FC = () => {
       "ID Egresado": meet.graduateId,
       Tipo: meet.type,
       Estado: meet.status,
-      Observaciones: meet.notes,
+      Observaciones: meet.observations,
       "Fecha de inicio": meet.dateInit,
       "Fecha de fin": meet.dateEnd,
     }));
@@ -486,13 +486,17 @@ export const AdminMeetings: React.FC = () => {
   const handleAddMeeting = async () => {
     if (validateForm()) {
       setLoading(true);
+
+      const userId = formData.companyId.split("_")[0];
+      const role = formData.companyId.split("_")[1];
+
       // Create new meeting
       const newMeeting: Meeting = {
         id: (meetings.length + 1).toString(),
-        graduateId: parseInt(formData.graduateName),
+        graduateId: role === "graduate" ? parseInt(userId) : null,
         graduateName: formData.graduateName,
         graduateEmail: formData.graduateEmail,
-        companyId: formData.companyId,
+        companyId: role === "company" ? userId : null,
         companyName: formData.companyName,
         companyEmail: formData.companyEmail,
         dateInit: `${formData.date}T${formData.time}`,
@@ -505,7 +509,7 @@ export const AdminMeetings: React.FC = () => {
           | "otro",
         status: "scheduled",
         location: formData.location,
-        notes: formData.notes,
+        observations: formData.observations,
         createdBy: "admin",
       };
       console.log(newMeeting);
@@ -522,19 +526,24 @@ export const AdminMeetings: React.FC = () => {
 
       const {
         id,
-        notes,
+        observations,
         companyEmail,
         companyName,
         createdBy,
         endTime,
         graduateEmail,
         location,
+        companyId,
         ...meetingData
       } = newMeeting;
 
-      const { error } = await supabase
-        .from("meetings")
-        .insert([{ observations: notes, ...meetingData }]);
+      const { error } = await supabase.from("meetings").insert([
+        {
+          observations: observations,
+          companyId: parseInt(companyId),
+          ...meetingData,
+        },
+      ]);
 
       const cEmail = companies.find((c) => {
         return c.id == formData.companyId;
@@ -570,7 +579,7 @@ export const AdminMeetings: React.FC = () => {
         graduateId: 0,
         graduateName: "",
         graduateEmail: "",
-        companyId: 0,
+        companyId: "",
         companyName: "",
         companyEmail: "",
         date: "",
@@ -578,7 +587,7 @@ export const AdminMeetings: React.FC = () => {
         endTime: "",
         type: "",
         location: "",
-        notes: "",
+        observations: "",
       });
 
       // Show success message
@@ -610,7 +619,7 @@ export const AdminMeetings: React.FC = () => {
                 | "seguimiento"
                 | "otro",
               location: formData.location,
-              notes: formData.notes,
+              observations: formData.observations,
             }
           : meeting
       );
@@ -779,7 +788,7 @@ export const AdminMeetings: React.FC = () => {
       endTime: endTime,
       type: meeting.type,
       location: meeting.location,
-      notes: meeting.notes,
+      observations: meeting.observations,
     });
 
     setIsEditModalOpen(true);
@@ -1160,7 +1169,7 @@ export const AdminMeetings: React.FC = () => {
                     <h4 className="text-md font-semibold mb-1">Notas</h4>
                     <div className="p-3 bg-content2 rounded-lg">
                       <p className="text-default-700">
-                        {selectedMeeting.notes || "No hay notas disponibles."}
+                        {selectedMeeting.observations || "No hay notas disponibles."}
                       </p>
                     </div>
                   </div>
@@ -1221,7 +1230,7 @@ export const AdminMeetings: React.FC = () => {
                         const selectedKey = Array.from(keys)[0].toString();
                         setFormData({
                           ...formData,
-                          companyId: selectedKey ? parseInt(selectedKey) : 0,
+                          companyId: selectedKey ? selectedKey : "",
                         });
                       }}
                       isInvalid={!!errors.companyId}
@@ -1231,7 +1240,7 @@ export const AdminMeetings: React.FC = () => {
                       <>
                         {companies.map((c) => (
                           <SelectItem
-                            key={c.id.toString()}
+                            key={c.id.toString() + "_company"}
                             textValue={`${c.name} - ${c.email}`}
                           >
                             {c.name} - {c.email}
@@ -1241,7 +1250,7 @@ export const AdminMeetings: React.FC = () => {
                       <>
                         {egresados.map((c) => (
                           <SelectItem
-                            key={c.id.toString()}
+                            key={c.id.toString() + "_graduate"}
                             textValue={`${c.name} - ${c.email}`}
                           >
                             {c.name} - {c.email}
@@ -1313,8 +1322,8 @@ export const AdminMeetings: React.FC = () => {
                   <Textarea
                     label="Notas"
                     placeholder="Ingrese notas o detalles adicionales sobre la reunión"
-                    value={formData.notes}
-                    onValueChange={(value) => handleChange("notes", value)}
+                    value={formData.observations}
+                    onValueChange={(value) => handleChange("observations", value)}
                     minRows={3}
                   />
                 </div>
@@ -1464,8 +1473,8 @@ export const AdminMeetings: React.FC = () => {
                   <Textarea
                     label="Notas"
                     placeholder="Ingrese notas o detalles adicionales sobre la reunión"
-                    value={formData.notes}
-                    onValueChange={(value) => handleChange("notes", value)}
+                    value={formData.observations}
+                    onValueChange={(value) => handleChange("observations", value)}
                     minRows={3}
                   />
                 </div>
