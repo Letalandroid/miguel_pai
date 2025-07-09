@@ -22,6 +22,7 @@ import { motion } from "framer-motion";
 import { addToast } from "@heroui/react";
 import { supabase } from "../../../supabase/client";
 import { useAuth } from "../../login/auth-context";
+import { MeetingSend, sendNotification } from "../../../utils/sendNotification";
 
 // Meeting type definition
 interface Meeting {
@@ -58,6 +59,7 @@ export const CompanyMeetings: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [egresados, setEgresados] = React.useState<Graduate[]>([]);
   const [diositos, setDiositos] = React.useState([]);
+  const [companies, setCompanies] = React.useState([]);
   const [selectedMeeting, setSelectedMeeting] = React.useState<Meeting | null>(
     null
   );
@@ -79,6 +81,7 @@ export const CompanyMeetings: React.FC = () => {
 
         if (companyError) throw companyError;
 
+        setCompanies(companyData);
         const admins = companyData.filter((d) => d.role === "admin");
 
         const { data: egresadosData, error: egresadosError } = await supabase
@@ -331,6 +334,30 @@ export const CompanyMeetings: React.FC = () => {
         return;
       }
 
+      const eEmail = egresados.find((e) => {
+        return e.id == graduate.id;
+      });
+
+      const cEmail = companies.find((c) => {
+        return c.id == user.id;
+      });
+
+      const cAdmin = companies
+        .filter((a) => a.role === "admin")
+        .map((a) => a.email);
+
+      const meet: MeetingSend = {
+        type: formData.type,
+        comanyName: cEmail.companyName,
+        graduateName: newMeeting.graduateName,
+        dateInit: newMeeting.dateInit,
+        dateEnd: newMeeting.dateEnd,
+        emails: [cEmail?.email ?? "", eEmail.email, ...(cAdmin ?? "")],
+        status: "scheduled",
+      };
+
+      await sendNotification(meet);
+
       setMeetings([addMetting, ...meetings]);
       setReload(!reload);
       setIsScheduleModalOpen(false);
@@ -384,6 +411,30 @@ export const CompanyMeetings: React.FC = () => {
         m.id === selectedMeeting.id ? { ...m, status: "cancelled" as const } : m
       );
 
+      const eEmail = egresados.find((e) => {
+        return e.id == selectedMeeting.graduateId;
+      });
+
+      const cEmail = companies.find((c) => {
+        return c.id == user.id;
+      });
+
+      const cAdmin = companies
+        .filter((a) => a.role === "admin")
+        .map((a) => a.email);
+
+      const meet: MeetingSend = {
+        type: formData.type,
+        comanyName: cEmail.companyName,
+        graduateName: selectedMeeting.graduateName,
+        dateInit: selectedMeeting.dateInit,
+        dateEnd: selectedMeeting.dateEnd,
+        emails: [cEmail?.email ?? "", eEmail.email, ...(cAdmin ?? "")],
+        status: "cancelled",
+      };
+
+      await sendNotification(meet);
+
       setMeetings(updatedMeetings);
       setIsCancelModalOpen(false);
       setIsDetailsModalOpen(false);
@@ -418,6 +469,30 @@ export const CompanyMeetings: React.FC = () => {
     const updatedMeetings = meetings.map((m) =>
       m.id === meeting.id ? { ...m, status: "completed" as const } : m
     );
+
+    const eEmail = egresados.find((e) => {
+      return e.id == meeting.graduateId;
+    });
+
+    const cEmail = companies.find((c) => {
+      return c.id == meeting.companyId;
+    });
+
+    const cAdmin = companies
+      .filter((a) => a.role === "admin")
+      .map((a) => a.email);
+
+    const meet: MeetingSend = {
+      type: formData.type,
+      comanyName: cEmail.companyName,
+      graduateName: meeting.graduateName,
+      dateInit: meeting.dateInit,
+      dateEnd: meeting.dateEnd,
+      emails: [cEmail?.email ?? "", eEmail.email, ...(cAdmin ?? "")],
+      status: "completed",
+    };
+
+    await sendNotification(meet);
 
     setMeetings(updatedMeetings);
     setIsDetailsModalOpen(false);
@@ -759,9 +834,10 @@ export const CompanyMeetings: React.FC = () => {
                     {egresados.map((graduate) => (
                       <SelectItem
                         key={graduate.id}
-                        textValue={`${graduate.name} - ${graduate.career}`}
+                        textValue={`${graduate.name} - ${graduate.email}`}
                       >
-                        {graduate.name} - {graduate.career ? graduate.career : graduate.email}
+                        {graduate.name} -{" "}
+                        {graduate.email}
                       </SelectItem>
                     ))}
                   </Select>
