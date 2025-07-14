@@ -34,11 +34,12 @@ interface Meeting {
   companyName: string;
   companyEmail: string;
   companyId?: string;
-  dateInit: string;
-  dateEnd: string;
-  endTime: string;
+  dateInit?: string;
+  dateEnd?: string;
+  time?: string;
+  endTime?: string;
   type: "entrevista" | "orientacion" | "seguimiento" | "otro";
-  status: "scheduled" | "completed" | "cancelled";
+  status: "scheduled" | "completed" | "cancelled" | "progress";
   location: string;
   observations: string;
   createdBy: "graduate" | "company" | "admin";
@@ -74,7 +75,8 @@ export const AdminMeetings: React.FC = () => {
     companyId: "",
     companyName: "",
     companyEmail: "",
-    date: "",
+    dateInit: "",
+    dateEnd: "",
     time: "",
     endTime: "",
     type: "",
@@ -269,6 +271,8 @@ export const AdminMeetings: React.FC = () => {
     switch (status) {
       case "scheduled":
         return "Programada";
+      case "progress":
+        return "Sin Programar";
       case "completed":
         return "Completada";
       case "cancelled":
@@ -363,24 +367,12 @@ export const AdminMeetings: React.FC = () => {
       isValid = false;
     }
 
-    if (!formData.date) {
+    if (!formData.dateInit) {
       newErrors.date = "La fecha es obligatoria";
       isValid = false;
     }
 
-    if (!formData.time) {
-      newErrors.time = "La hora de inicio es obligatoria";
-      isValid = false;
-    }
-
-    if (!formData.endTime) {
-      newErrors.endTime = "La hora de fin es obligatoria";
-      isValid = false;
-    } else if (
-      formData.time &&
-      formData.endTime &&
-      formData.endTime <= formData.time
-    ) {
+    if (formData.endTime && formData.endTime <= formData.time) {
       newErrors.endTime =
         "La hora de fin debe ser posterior a la hora de inicio";
       isValid = false;
@@ -499,9 +491,9 @@ export const AdminMeetings: React.FC = () => {
         companyId: role === "company" ? userId : null,
         companyName: formData.companyName,
         companyEmail: formData.companyEmail,
-        dateInit: `${formData.date}T${formData.time}`,
-        dateEnd: `${formData.date}T${formData.endTime}`,
-        endTime: `${formData.date}T${formData.endTime}`,
+        dateInit: `${formData.dateInit}T${formData.time}`,
+        dateEnd: `${formData.dateInit}T${formData.endTime}`,
+        endTime: `${formData.dateEnd}T${formData.endTime}`,
         type: formData.type as
           | "entrevista"
           | "orientacion"
@@ -582,7 +574,8 @@ export const AdminMeetings: React.FC = () => {
         companyId: "",
         companyName: "",
         companyEmail: "",
-        date: "",
+        dateInit: "",
+        dateEnd: "",
         time: "",
         endTime: "",
         type: "",
@@ -600,7 +593,7 @@ export const AdminMeetings: React.FC = () => {
   };
 
   // Handle form submission for editing a meeting
-  const handleEditMeeting = () => {
+  const handleEditMeeting = async () => {
     if (validateForm() && selectedMeeting) {
       // Update meeting
       const updatedMeetings = meetings.map((meeting) =>
@@ -611,8 +604,8 @@ export const AdminMeetings: React.FC = () => {
               graduateEmail: formData.graduateEmail,
               companyName: formData.companyName,
               companyEmail: formData.companyEmail,
-              date: `${formData.date}T${formData.time}`,
-              endTime: `${formData.date}T${formData.endTime}`,
+              date: `${formData.dateInit}T${formData.time}`,
+              endTime: `${formData.dateEnd}T${formData.endTime}`,
               type: formData.type as
                 | "entrevista"
                 | "orientacion"
@@ -624,8 +617,47 @@ export const AdminMeetings: React.FC = () => {
           : meeting
       );
 
+      const {
+        id,
+        observations,
+        companyEmail,
+        companyName,
+        createdBy,
+        endTime,
+        graduateEmail,
+        location,
+        companyId,
+        ...meetingData
+      } = selectedMeeting;
+
+      const updatedFields = {
+        observations: formData.observations,
+        companyId: parseInt(companyId),
+        ...meetingData,
+      };
+
+      // Condicionalmente incluir el cambio de estado
+      if (selectedMeeting.status === "progress") {
+        updatedFields.status = "scheduled";
+      }
+
+      const { error } = await supabase
+        .from("meetings")
+        .update([updatedFields])
+        .eq("id", selectedMeeting.id);
+
+      if (error) {
+        console.error(error);
+        addToast({
+          title: "No se actualizó la reunión",
+          description: "La reunión no fue actualizada.",
+          color: "danger",
+        });
+      }
+
       setMeetings(updatedMeetings);
       setIsEditModalOpen(false);
+      setReload(!reload);
 
       // Show success message
       addToast({
@@ -765,16 +797,10 @@ export const AdminMeetings: React.FC = () => {
   };
 
   // Edit meeting
-  const editMeeting = (meeting: Meeting) => {
+  const editMeeting = (meeting: Meeting | null) => {
+    if (!meeting) return;
+
     setSelectedMeeting(meeting);
-
-    // Parse date and time
-    const meetingDate = new Date(meeting.dateInit);
-    const date = meetingDate.toISOString().split("T")[0];
-    const time = meetingDate.toTimeString().slice(0, 5);
-
-    const meetingEndTime = new Date(meeting.endTime);
-    const endTime = meetingEndTime.toTimeString().slice(0, 5);
 
     setFormData({
       graduateId: meeting.graduateId,
@@ -783,9 +809,10 @@ export const AdminMeetings: React.FC = () => {
       companyId: meeting.companyId,
       companyName: meeting.companyName,
       companyEmail: meeting.companyEmail,
-      date: date,
-      time: time,
-      endTime: endTime,
+      dateInit: meeting.dateInit,
+      dateEnd: meeting.dateEnd,
+      time: meeting.time,
+      endTime: meeting.endTime,
       type: meeting.type,
       location: meeting.location,
       observations: meeting.observations,
@@ -1029,6 +1056,19 @@ export const AdminMeetings: React.FC = () => {
                         </Button>
                       </>
                     )}
+                    {meeting.status === "progress" && (
+                      <Button
+                        size="sm"
+                        color="success"
+                        variant="flat"
+                        onPress={() => {
+                          setSelectedMeeting(meeting);
+                          editMeeting(meeting);
+                        }}
+                      >
+                        Aceptar reunión
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -1169,7 +1209,8 @@ export const AdminMeetings: React.FC = () => {
                     <h4 className="text-md font-semibold mb-1">Notas</h4>
                     <div className="p-3 bg-content2 rounded-lg">
                       <p className="text-default-700">
-                        {selectedMeeting.observations || "No hay notas disponibles."}
+                        {selectedMeeting.observations ||
+                          "No hay notas disponibles."}
                       </p>
                     </div>
                   </div>
@@ -1264,8 +1305,8 @@ export const AdminMeetings: React.FC = () => {
                     <Input
                       type="date"
                       label="Fecha"
-                      value={formData.date}
-                      onValueChange={(value) => handleChange("date", value)}
+                      value={formData.dateInit}
+                      onValueChange={(value) => handleChange("dateInit", value)}
                       isInvalid={!!errors.date}
                       errorMessage={errors.date}
                       isRequired
@@ -1323,7 +1364,9 @@ export const AdminMeetings: React.FC = () => {
                     label="Notas"
                     placeholder="Ingrese notas o detalles adicionales sobre la reunión"
                     value={formData.observations}
-                    onValueChange={(value) => handleChange("observations", value)}
+                    onValueChange={(value) =>
+                      handleChange("observations", value)
+                    }
                     minRows={3}
                   />
                 </div>
@@ -1415,8 +1458,10 @@ export const AdminMeetings: React.FC = () => {
                     <Input
                       type="date"
                       label="Fecha"
-                      value={formData.date}
-                      onValueChange={(value) => handleChange("date", value)}
+                      value={
+                        formData.dateInit ? formData.dateInit.split("T")[0] : ""
+                      }
+                      onValueChange={(value) => handleChange("dateInit", value)}
                       isInvalid={!!errors.date}
                       errorMessage={errors.date}
                       isRequired
@@ -1425,7 +1470,9 @@ export const AdminMeetings: React.FC = () => {
                     <Input
                       type="time"
                       label="Hora de inicio"
-                      value={formData.time}
+                      value={
+                        formData.dateInit ? formData.dateInit.split("T")[1] : ""
+                      }
                       onValueChange={(value) => handleChange("time", value)}
                       isInvalid={!!errors.time}
                       errorMessage={errors.time}
@@ -1435,7 +1482,9 @@ export const AdminMeetings: React.FC = () => {
                     <Input
                       type="time"
                       label="Hora de fin"
-                      value={formData.endTime}
+                      value={
+                        formData.dateInit ? formData.dateEnd.split("T")[1] : ""
+                      }
                       onValueChange={(value) => handleChange("endTime", value)}
                       isInvalid={!!errors.endTime}
                       errorMessage={errors.endTime}
@@ -1471,10 +1520,12 @@ export const AdminMeetings: React.FC = () => {
                   </div>
 
                   <Textarea
-                    label="Notas"
+                    label="Observaciones"
                     placeholder="Ingrese notas o detalles adicionales sobre la reunión"
                     value={formData.observations}
-                    onValueChange={(value) => handleChange("observations", value)}
+                    onValueChange={(value) =>
+                      handleChange("observations", value)
+                    }
                     minRows={3}
                   />
                 </div>
@@ -1483,9 +1534,15 @@ export const AdminMeetings: React.FC = () => {
                 <Button color="default" variant="light" onPress={onClose}>
                   Cancelar
                 </Button>
-                <Button color="primary" onPress={handleEditMeeting}>
-                  Guardar Cambios
-                </Button>
+                {selectedMeeting.status === "progress" ? (
+                  <Button color="success" onPress={handleEditMeeting}>
+                    Aceptar reunión
+                  </Button>
+                ) : (
+                  <Button color="primary" onPress={handleEditMeeting}>
+                    Guardar Cambios
+                  </Button>
+                )}
               </ModalFooter>
             </>
           )}

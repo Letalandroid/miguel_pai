@@ -33,7 +33,7 @@ interface Meeting {
   dateInit: string;
   dateEnd: string;
   type: string;
-  status: "scheduled" | "completed" | "cancelled";
+  status: "scheduled" | "completed" | "cancelled" | "progress";
   observations?: string;
 }
 
@@ -194,8 +194,8 @@ export const GraduateMeetings: React.FC = () => {
         dateInit: `${formData.date}T${formData.timeInit}:00`,
         dateEnd: `${formData.date}T${formData.timeEnd}:00`,
         type: `${formData.type} - ${companyName}`,
-        status: "scheduled",
-        observations: formData.observations,
+        status: "progress",
+        observations: formData.observations || '',
       };
 
       if (hasConflict(newMeeting, meetings)) {
@@ -351,6 +351,8 @@ export const GraduateMeetings: React.FC = () => {
     switch (status) {
       case "scheduled":
         return "Programada";
+      case "progress":
+        return "Sin Programar";
       case "completed":
         return "Completada";
       case "cancelled":
@@ -578,14 +580,14 @@ export const GraduateMeetings: React.FC = () => {
                       <SelectItem key={type.value}>{type.label}</SelectItem>
                     ))}
                   </Select>
-                  <Textarea
+                  {/* <Textarea
                     label="Observaciones"
                     placeholder="Agrega notas o detalles sobre la reunión"
                     value={formData.observations}
                     onValueChange={(value) =>
                       setFormData({ ...formData, observations: value })
                     }
-                  />
+                  /> */}
                 </div>
               </ModalBody>
               <ModalFooter>
