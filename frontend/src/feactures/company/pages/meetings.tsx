@@ -33,7 +33,7 @@ interface Meeting {
   dateInit: string;
   dateEnd: string;
   type: string;
-  status: "scheduled" | "completed" | "cancelled";
+  status: "scheduled" | "completed" | "cancelled" | "progress";
   observations?: string;
 }
 
